@@ -22,6 +22,15 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:8000",
+]
+
+if settings.ENVIRONMENT == "development":
+    ALLOWED_ORIGINS.append("*")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,14 +45,15 @@ def create_app() -> FastAPI:
         description="AI-powered research assistant for plant science",
         version="0.1.0",
         docs_url="/docs" if settings.DEBUG else None,
+        redoc_url="/redoc" if settings.DEBUG else None,
         lifespan=lifespan,
     )
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=ALLOWED_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
 
@@ -52,6 +62,10 @@ def create_app() -> FastAPI:
     @application.get("/health", tags=["Health"])
     async def health_check():
         return {"status": "healthy", "service": "pip-ai-service", "version": "0.1.0"}
+
+    @application.get("/", tags=["Root"])
+    async def root():
+        return {"message": "Plant Intelligence Platform - AI Service", "docs": "/docs"}
 
     return application
 
