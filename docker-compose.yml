@@ -1,0 +1,234 @@
+version: "3.9"
+
+services:
+  # =============================================
+  # Frontend
+  # =============================================
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      - NEXT_PUBLIC_AI_URL=http://localhost:8001/api/v1
+      - NEXTAUTH_URL=http://localhost:3000
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+    networks:
+      - pip-network
+
+  # =============================================
+  # API Service
+  # =============================================
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pip:password@postgres:5432/pip
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j_password
+      - REDIS_URL=redis://redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+    volumes:
+      - ./apps/api:/app
+      - api-storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+    networks:
+      - pip-network
+
+  # =============================================
+  # AI Service
+  # =============================================
+  ai-service:
+    build:
+      context: ./apps/ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j_password
+      - REDIS_URL=redis://redis:6379/1
+      - QDRANT_URL=http://qdrant:6333
+    volumes:
+      - ./apps/ai-service:/app
+      - model-cache:/app/.cache/models
+    depends_on:
+      - qdrant
+      - redis
+    networks:
+      - pip-network
+
+  # =============================================
+  # Celery Worker
+  # =============================================
+  celery-worker:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: >
+      celery -A app.celery_app worker
+      --loglevel=info
+      --concurrency=4
+      --queues=default,ai,high_priority
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://pip:password@postgres:5432/pip
+      - REDIS_URL=redis://redis:6379/0
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j_password
+      - QDRANT_URL=http://qdrant:6333
+    volumes:
+      - ./apps/api:/app
+      - api-storage:/app/storage
+    depends_on:
+      - api
+      - redis
+    networks:
+      - pip-network
+
+  celery-beat:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    command: >
+      celery -A app.celery_app beat
+      --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./apps/api:/app
+    depends_on:
+      - redis
+    networks:
+      - pip-network
+
+  # =============================================
+  # Databases
+  # =============================================
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: pip
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pip
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pip -d pip"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pip-network
+
+  neo4j:
+    image: neo4j:5-community
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/neo4j_password
+      NEO4J_PLUGINS: '["graph-data-science"]'
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pip-network
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    networks:
+      - pip-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pip-network
+
+  # =============================================
+  # Reverse Proxy
+  # =============================================
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+      - ai-service
+      - web
+    networks:
+      - pip-network
+
+# =============================================
+# Volumes
+# =============================================
+volumes:
+  postgres_data:
+  neo4j_data:
+  neo4j_logs:
+  qdrant_data:
+  redis_data:
+  api-storage:
+  model-cache:
+
+# =============================================
+# Networks
+# =============================================
+networks:
+  pip-network:
+    driver: bridge

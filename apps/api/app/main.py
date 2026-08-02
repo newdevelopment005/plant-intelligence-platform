@@ -1,0 +1,98 @@
+from contextlib import asynccontextmanager
+
+import structlog
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.config import settings
+from app.core.exceptions import register_exception_handlers
+from app.core.health import router as health_router
+from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware
+from app.core.rate_limiter import RateLimitMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
+from app.modules.admin.api.router import router as admin_router
+from app.modules.ai_assistant.api.router import router as ai_assistant_router
+from app.modules.auth.api.router import router as auth_router
+from app.modules.bioinformatics.api.router import router as bioinformatics_router
+from app.modules.genomics.api.router import router as genomics_router
+from app.modules.germplasm.api.router import router as germplasm_router
+from app.modules.image_analysis.api.router import router as image_analysis_router
+from app.modules.knowledge_graph.api.router import router as knowledge_graph_router
+from app.modules.lims.api.router import router as lims_router
+from app.modules.literature.api.router import router as literature_router
+from app.modules.molecular.api.router import router as molecular_router
+from app.modules.notebook.api.router import router as notebook_router
+from app.modules.phenotyping.api.router import router as phenotyping_router
+from app.modules.project.api.router import router as project_router
+from app.modules.reporting.api.router import router as reporting_router
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.dev.set_exc_info,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer(),
+    ],
+    wrapper_class=structlog.make_filtering_bound_logger(settings.LOG_LEVEL),
+    context_class=dict,
+    logger_factory=structlog.PrintLoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+logger = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting API service", environment=settings.ENVIRONMENT)
+    yield
+    logger.info("Shutting down API service")
+
+
+def create_app() -> FastAPI:
+    application = FastAPI(
+        title="Plant Intelligence Platform API",
+        description="Enterprise-grade AI-powered scientific research platform for plant science",
+        version="0.1.0",
+        docs_url="/docs" if settings.DEBUG else None,
+        redoc_url="/redoc" if settings.DEBUG else None,
+        lifespan=lifespan,
+    )
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    application.add_middleware(SecurityHeadersMiddleware)
+    application.add_middleware(RateLimitMiddleware)
+    application.add_middleware(RequestIDMiddleware)
+    application.add_middleware(RequestLoggingMiddleware)
+
+    register_exception_handlers(application)
+
+    application.include_router(health_router, tags=["Health"])
+    application.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
+    application.include_router(ai_assistant_router, prefix="/api/v1/ai", tags=["AI Research Assistant"])
+    application.include_router(project_router, prefix="/api/v1/projects", tags=["Projects"])
+    application.include_router(germplasm_router, prefix="/api/v1/germplasm", tags=["Germplasm"])
+    application.include_router(phenotyping_router, prefix="/api/v1/phenotyping", tags=["Phenotyping"])
+    application.include_router(genomics_router, prefix="/api/v1/genomics", tags=["Genomics"])
+    application.include_router(molecular_router, prefix="/api/v1/molecular", tags=["Molecular Biology"])
+    application.include_router(bioinformatics_router, prefix="/api/v1/bioinformatics", tags=["Bioinformatics"])
+    application.include_router(literature_router, prefix="/api/v1/literature", tags=["Literature"])
+    application.include_router(knowledge_graph_router, prefix="/api/v1/knowledge-graph", tags=["Knowledge Graph"])
+    application.include_router(notebook_router, prefix="/api/v1/notebook", tags=["Notebook"])
+    application.include_router(lims_router, prefix="/api/v1/lims", tags=["LIMS"])
+    application.include_router(image_analysis_router, prefix="/api/v1/images", tags=["Image Analysis"])
+    application.include_router(reporting_router, prefix="/api/v1/reports", tags=["Reporting"])
+    application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
+
+    return application
+
+
+app = create_app()

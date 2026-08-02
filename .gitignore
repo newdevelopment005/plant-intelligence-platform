@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.eggs/
+*.whl
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+.next/
+out/
+.npm
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite3
+
+# Model cache
+models/
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# MyPy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/

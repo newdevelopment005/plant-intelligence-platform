@@ -1,0 +1,154 @@
+version: "3.9"
+
+# Production overrides — use with:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  # =============================================
+  # Frontend (production)
+  # =============================================
+  web:
+    restart: always
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://your-domain.com/api/v1}
+      - NEXT_PUBLIC_AI_URL=${NEXT_PUBLIC_AI_URL:-https://your-domain.com/api/v1}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://your-domain.com}
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  # =============================================
+  # API Service (production)
+  # =============================================
+  api:
+    restart: always
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 4
+      --limit-concurrency 1000
+      --timeout-keep-alive 30
+    volumes:
+      - api-storage:/app/storage
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # =============================================
+  # AI Service (production)
+  # =============================================
+  ai-service:
+    restart: always
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8001
+      --workers 2
+      --timeout-keep-alive 120
+    volumes:
+      - model-cache:/app/.cache/models
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "4.0"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # =============================================
+  # Celery Worker (production)
+  # =============================================
+  celery-worker:
+    restart: always
+    command: >
+      celery -A app.celery_app worker
+      --loglevel=warning
+      --concurrency=8
+      --queues=default,ai,high_priority
+    volumes:
+      - api-storage:/app/storage
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+
+  # =============================================
+  # Celery Beat (production)
+  # =============================================
+  celery-beat:
+    restart: always
+    command: >
+      celery -A app.celery_app beat
+      --loglevel=warning
+
+  # =============================================
+  # Databases (production hardening)
+  # =============================================
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+    healthcheck:
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  neo4j:
+    restart: always
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-neo4j_password}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+
+  qdrant:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "2.0"
+
+  redis:
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+
+  # =============================================
+  # Reverse Proxy (production)
+  # =============================================
+  nginx:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"

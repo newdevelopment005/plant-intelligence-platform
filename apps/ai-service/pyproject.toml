@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pip-ai-service"
+version = "0.1.0"
+description = "Plant Intelligence Platform - AI Service"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "PIP Team", email = "team@pip-platform.org" },
+]
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-community>=0.3.0",
+    "sentence-transformers>=3.3.0",
+    "qdrant-client>=1.12.0",
+    "neo4j>=5.27.0",
+    "redis>=5.2.0",
+    "httpx>=0.28.0",
+    "structlog>=24.4.0",
+    "python-dotenv>=1.0.1",
+    "torch>=2.5.0",
+    "Pillow>=11.0.0",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = ["langgraph.*", "langchain.*", "sentence_transformers.*", "qdrant_client.*", "neo4j.*", "torch.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
