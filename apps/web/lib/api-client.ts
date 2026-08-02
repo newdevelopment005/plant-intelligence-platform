@@ -41,7 +41,7 @@ class ApiClient {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -142,6 +142,396 @@ class ApiClient {
         new_password: newPassword,
       }),
     });
+  }
+
+  // =============================================
+  // Projects
+  // =============================================
+  async listProjects(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/projects${qs}`);
+  }
+
+  async createProject(data: { name: string; description?: string; tags?: string[] }) {
+    return this.request<any>("/projects", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getProject(id: string) {
+    return this.request<any>(`/projects/${id}`);
+  }
+
+  async deleteProject(id: string) {
+    return this.request<any>(`/projects/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Germplasm
+  // =============================================
+  async listSpecies(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/germplasm/species${qs}`);
+  }
+
+  async createSpecies(data: { common_name: string; scientific_name: string; family?: string }) {
+    return this.request<any>("/germplasm/species", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listAccessions(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/germplasm/accessions${qs}`);
+  }
+
+  async createAccession(data: any) {
+    return this.request<any>("/germplasm/accessions", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getAccession(id: string) {
+    return this.request<any>(`/germplasm/accessions/${id}`);
+  }
+
+  // =============================================
+  // Phenotyping
+  // =============================================
+  async listExperiments(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/phenotyping/experiments${qs}`);
+  }
+
+  async createExperiment(data: any) {
+    return this.request<any>("/phenotyping/experiments", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getExperiment(id: string) {
+    return this.request<any>(`/phenotyping/experiments/${id}`);
+  }
+
+  async listTraits(experimentId: string) {
+    return this.request<{ items: any[]; total: number }>(`/phenotyping/experiments/${experimentId}/traits`);
+  }
+
+  async createTrait(experimentId: string, data: any) {
+    return this.request<any>(`/phenotyping/experiments/${experimentId}/traits`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listMeasurements(experimentId: string, params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/phenotyping/experiments/${experimentId}/measurements${qs}`);
+  }
+
+  async createMeasurement(experimentId: string, data: any) {
+    return this.request<any>(`/phenotyping/experiments/${experimentId}/measurements`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // Genomics
+  // =============================================
+  async listSequences(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/genomics/sequences${qs}`);
+  }
+
+  async createSequence(data: any) {
+    return this.request<any>("/genomics/sequences", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSequence(id: string) {
+    return this.request<any>(`/genomics/sequences/${id}`);
+  }
+
+  async listVariants(sequenceId: string, params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/genomics/sequences/${sequenceId}/variants${qs}`);
+  }
+
+  async createVariant(sequenceId: string, data: any) {
+    return this.request<any>(`/genomics/sequences/${sequenceId}/variants`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // Molecular
+  // =============================================
+  async listMolecularExperiments(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/molecular/experiments${qs}`);
+  }
+
+  async createMolecularExperiment(data: any) {
+    return this.request<any>("/molecular/experiments", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listPrimers(experimentId: string) {
+    return this.request<{ items: any[]; total: number }>(`/molecular/experiments/${experimentId}/primers`);
+  }
+
+  async createPrimer(experimentId: string, data: any) {
+    return this.request<any>(`/molecular/experiments/${experimentId}/primers`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listConstructs(experimentId: string) {
+    return this.request<{ items: any[]; total: number }>(`/molecular/experiments/${experimentId}/constructs`);
+  }
+
+  async createConstruct(experimentId: string, data: any) {
+    return this.request<any>(`/molecular/experiments/${experimentId}/constructs`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // Literature
+  // =============================================
+  async listPapers(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/literature/papers${qs}`);
+  }
+
+  async createPaper(data: any) {
+    return this.request<any>("/literature/papers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async searchPapers(query: string) {
+    return this.request<{ items: any[]; total: number }>(`/literature/search?q=${encodeURIComponent(query)}`);
+  }
+
+  async listCollections() {
+    return this.request<{ items: any[]; total: number }>("/literature/collections");
+  }
+
+  async createCollection(data: { name: string; description?: string }) {
+    return this.request<any>("/literature/collections", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // Knowledge Graph
+  // =============================================
+  async listKnowledgeEntities(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/knowledge-graph/entities${qs}`);
+  }
+
+  async createKnowledgeEntity(data: any) {
+    return this.request<any>("/knowledge-graph/entities", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async exploreEntity(id: string) {
+    return this.request<any>(`/knowledge-graph/entities/${id}/explore`);
+  }
+
+  async listEdges(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/knowledge-graph/edges${qs}`);
+  }
+
+  async createEdge(data: any) {
+    return this.request<any>("/knowledge-graph/edges", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // AI Assistant
+  // =============================================
+  async listConversations() {
+    return this.request<{ items: any[]; total: number }>("/ai/conversations");
+  }
+
+  async createConversation(data: { title: string; project_id?: string }) {
+    return this.request<any>("/ai/conversations", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async sendMessage(conversationId: string, data: { content: string }) {
+    return this.request<any>(`/ai/conversations/${conversationId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listMessages(conversationId: string) {
+    return this.request<{ items: any[]; total: number }>(`/ai/conversations/${conversationId}/messages`);
+  }
+
+  // =============================================
+  // Notebook
+  // =============================================
+  async listNotebookEntries(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/notebook/entries${qs}`);
+  }
+
+  async createNotebookEntry(data: { title: string; content: string; entry_type?: string; tags?: string[] }) {
+    return this.request<any>("/notebook/entries", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getNotebookEntry(id: string) {
+    return this.request<any>(`/notebook/entries/${id}`);
+  }
+
+  async updateNotebookEntry(id: string, data: any) {
+    return this.request<any>(`/notebook/entries/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // LIMS
+  // =============================================
+  async listSamples(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/lims/samples${qs}`);
+  }
+
+  async createSample(data: any) {
+    return this.request<any>("/lims/samples", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listEquipment() {
+    return this.request<{ items: any[]; total: number }>("/lims/equipment");
+  }
+
+  async listReagents(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/lims/reagents${qs}`);
+  }
+
+  async listLowStockReagents() {
+    return this.request<{ items: any[]; total: number }>("/lims/reagents/low-stock");
+  }
+
+  // =============================================
+  // Image Analysis
+  // =============================================
+  async listImages(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/images${qs}`);
+  }
+
+  async uploadImage(data: FormData) {
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${this.baseUrl}/images`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: data,
+    });
+    if (!response.ok) throw new Error("Upload failed");
+    return response.json();
+  }
+
+  async listAnalysisJobs(imageId: string) {
+    return this.request<{ items: any[]; total: number }>(`/images/${imageId}/analysis`);
+  }
+
+  async createAnalysisJob(imageId: string, data: { analysis_type: string; parameters?: any }) {
+    return this.request<any>(`/images/${imageId}/analysis`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // =============================================
+  // Reporting
+  // =============================================
+  async listReports(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/reports${qs}`);
+  }
+
+  async createReport(data: any) {
+    return this.request<any>("/reports", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async downloadReport(id: string) {
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${this.baseUrl}/reports/${id}/download`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) throw new Error("Download failed");
+    return response.blob();
+  }
+
+  async listReportTemplates() {
+    return this.request<{ items: any[]; total: number }>("/reports/templates");
+  }
+
+  // =============================================
+  // Admin
+  // =============================================
+  async adminListUsers(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/admin/users${qs}`);
+  }
+
+  async adminUpdateUserRole(userId: string, role: string) {
+    return this.request<any>(`/admin/users/${userId}/role`, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async adminGetAuditLog(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/admin/audit-log${qs}`);
+  }
+
+  async adminGetHealth() {
+    return this.request<any>("/admin/health");
+  }
+
+  async adminGetStats() {
+    return this.request<any>("/admin/stats");
   }
 }
 

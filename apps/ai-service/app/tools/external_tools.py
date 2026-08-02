@@ -20,7 +20,7 @@ def get_gene_info(gene_id: str) -> str:
 
 
 @tool
-def query_neo4j.cypher(query: str) -> str:
+def query_neo4j(query: str) -> str:
     """Execute a Cypher query against the knowledge graph."""
     return f"Neo4j query results for: {query}"
 
@@ -41,7 +41,7 @@ ALL_TOOLS = [
     search_pubmed,
     search_uniprot,
     get_gene_info,
-    query_neo4j.cypher,
+    query_neo4j,
     search_vectors,
     analyze_image_features,
 ]
