@@ -1,17 +1,24 @@
 # Plant Intelligence Platform
 
-[![CI](https://github.com/your-org/plant-intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/plant-intelligence-platform/actions/workflows/ci.yml)
+[![CI](https://github.com/newdevelopment005/plant-intelligence-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/newdevelopment005/plant-intelligence-platform/actions/workflows/ci.yml)
+[![Deploy](https://github.com/newdevelopment005/plant-intelligence-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/newdevelopment005/plant-intelligence-platform/actions/workflows/deploy.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Enterprise-grade AI-powered scientific research platform for plant science.
 
+## Live Demo
+
+- **Frontend**: [pip-platform.vercel.app](https://pip-platform.vercel.app)
+- **API Docs**: [api.pip-platform.org/docs](https://api.pip-platform.org/docs)
+- **AI Service**: [pip-ai-service.hf.space](https://pip-ai-service.hf.space)
+
 ## Architecture
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, shadcn/ui
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
 - **Backend**: FastAPI, Python 3.12, SQLAlchemy, Alembic
 - **AI Service**: LangGraph, LangChain, Sentence Transformers
 - **Databases**: PostgreSQL, Neo4j, Qdrant, Redis
-- **Deployment**: Docker, GitHub Actions, Vercel
+- **Deployment**: Vercel (frontend), Docker (backend), Hugging Face Spaces (AI)
 
 ## Quick Start
 
@@ -26,7 +33,7 @@ Enterprise-grade AI-powered scientific research platform for plant science.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/plant-intelligence-platform.git
+git clone https://github.com/newdevelopment005/plant-intelligence-platform.git
 cd plant-intelligence-platform
 
 # Copy environment variables
@@ -109,6 +116,29 @@ plant-intelligence-platform/
 | 17 | Production Hardening | Completed |
 | 18 | Final QA & Release | Completed |
 
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
+
+### Quick Deploy
+
+**Frontend (Vercel)**
+```bash
+cd apps/web
+vercel --prod
+```
+
+**AI Service (Hugging Face Spaces)**
+```bash
+cd apps/ai-service
+huggingface-cli upload newdevelopment005/pip-ai-service . --repo-type space
+```
+
+**Backend (Docker)**
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
 ## API Documentation
 
 Once the API is running, visit:
@@ -128,6 +158,28 @@ make test-cov
 cd apps/api && pytest tests/unit/test_auth.py -v
 ```
 
+## AI Capabilities
+
+| Feature | Description |
+|---------|-------------|
+| Research Chat | Scientific Q&A with literature retrieval |
+| Gene Recommendations | Evidence-based candidate gene suggestions |
+| Experiment Design | Rigorous experimental protocol generation |
+| Literature Search | PubMed-powered paper discovery |
+| Paper Summarization | Automated literature synthesis |
+| Image Analysis | Disease detection, phenotype measurement |
+| Knowledge Graph | Entity relationships and inference |
+| Statistical Guidance | Appropriate test recommendations |
+
+## Security
+
+- JWT authentication with refresh tokens
+- Role-based access control (RBAC)
+- Rate limiting (100 req/min general, 30 req/min AI)
+- Security headers (XSS, CSRF, clickjacking protection)
+- Input validation via Pydantic
+- SQL injection prevention via SQLAlchemy ORM
+
 ## Contributing
 
 1. Fork the repository
@@ -139,3 +191,9 @@ cd apps/api && pytest tests/unit/test_auth.py -v
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+## Support
+
+- Documentation: [docs/](docs/)
+- Issues: [GitHub Issues](https://github.com/newdevelopment005/plant-intelligence-platform/issues)
+- Security: [SECURITY.md](SECURITY.md)
