@@ -41,7 +41,8 @@ class ApiClient {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async request<T>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async request<T = any>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
