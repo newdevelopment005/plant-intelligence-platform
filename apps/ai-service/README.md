@@ -1,38 +1,36 @@
----
-title: Plant Intelligence Platform
-emoji: 🌱
-colorFrom: green
-colorTo: blue
-sdk: gradio
-sdk_version: 4.44.1
-app_file: app.py
-pinned: true
-license: mit
----
+# Plant Intelligence Platform - AI Service
 
-# Plant Intelligence Platform
-
-AI-powered scientific research platform for plant science.
+FastAPI-based AI microservice for plant science research.
 
 ## Features
 
-- Research Chat - Scientific Q&A
-- Literature Search - PubMed integration
-- Paper Summarization - Automated synthesis
-- Gene Recommendations - Candidate gene suggestions
-- Experiment Design - Protocol generation
+- Research Chat - Scientific Q&A with literature retrieval
+- Gene Recommendations - Evidence-based candidate gene suggestions
+- Experiment Design - Rigorous experimental protocol generation
+- Literature Search - PubMed-powered paper discovery
+- Paper Summarization - Automated literature synthesis
 - Image Analysis - Disease detection, phenotype measurement
-- Knowledge Graph - Entity relationships
+- Knowledge Graph - Entity relationships and inference
 
-## Setup
+## Development
 
-Set environment variables in Space Settings:
-- `OPENAI_API_KEY` - Your OpenAI API key
-- `NEO4J_URI` - Neo4j bolt URL
-- `NEO4J_USER` - Neo4j username
-- `NEO4J_PASSWORD` - Neo4j password
-- `REDIS_URL` - Redis URL
-- `QDRANT_URL` - Qdrant HTTP URL
+```bash
+pip install -e ".[dev]"
+uvicorn app.main:app --reload --port 8001
+```
+
+## Docker
+
+```bash
+docker build -t pip-ai-service .
+docker run -p 8001:8001 pip-ai-service
+```
+
+## API Documentation
+
+Once running, visit:
+- Swagger UI: http://localhost:8001/docs
+- ReDoc: http://localhost:8001/redoc
 
 ## License
 
