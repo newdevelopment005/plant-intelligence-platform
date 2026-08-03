@@ -1,16 +1,3 @@
 {
-  "version": 2,
-  "name": "plant-intelligence-platform",
-  "builds": [
-    {
-      "src": "apps/web/**",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "apps/web/$1"
-    }
-  ]
+  "version": 2
 }
