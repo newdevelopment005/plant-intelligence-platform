@@ -26,6 +26,8 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:8000",
+    "https://*.ngrok-free.app",
+    "https://*.ngrok.io",
 ]
 
 if settings.ENVIRONMENT == "development":

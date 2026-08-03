@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 
+import httpx
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 
 from app.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -91,6 +93,23 @@ def create_app() -> FastAPI:
     application.include_router(image_analysis_router, prefix="/api/v1/images", tags=["Image Analysis"])
     application.include_router(reporting_router, prefix="/api/v1/reports", tags=["Reporting"])
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
+
+    @application.api_route("/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+    async def ai_proxy(path: str, request: Request):
+        """Proxy requests to the AI microservice."""
+        body = await request.body()
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.request(
+                method=request.method,
+                url=f"{settings.AI_SERVICE_URL}/api/v1/{path}",
+                headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
+                content=body,
+            )
+        return Response(
+            content=resp.content,
+            status_code=resp.status_code,
+            headers=dict(resp.headers),
+        )
 
     return application
 

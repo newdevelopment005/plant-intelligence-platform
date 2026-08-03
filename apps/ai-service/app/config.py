@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     OPENAI_MINI_MODEL: str = "gpt-4o-mini"
     HF_TOKEN: str = ""
 
+    USE_LOCAL_LLM: bool = True
+    OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
+    OLLAMA_MODEL: str = "gemma2:2b"
+    OLLAMA_MINI_MODEL: str = "gemma2:2b"
+
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384
 

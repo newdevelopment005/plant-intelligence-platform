@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o"
     OPENAI_MINI_MODEL: str = "gpt-4o-mini"
 
+    AI_SERVICE_URL: str = "http://localhost:8001"
+
     STORAGE_BACKEND: str = "local"
     STORAGE_LOCAL_PATH: str = "./storage"
 
