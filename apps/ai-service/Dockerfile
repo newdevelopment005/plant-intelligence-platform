@@ -13,6 +13,6 @@ COPY . .
 
 RUN mkdir -p /app/.cache/models
 
-EXPOSE 8001
+EXPOSE 7860
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]

@@ -1,36 +1,30 @@
-# Plant Intelligence Platform - AI Service
+---
+title: Plant Intelligence Platform
+emoji: 🌱
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: true
+license: mit
+---
 
-FastAPI-based AI microservice for plant science research.
+# Plant Intelligence Platform
+
+AI-powered scientific research platform for plant science.
 
 ## Features
 
-- Research Chat - Scientific Q&A with literature retrieval
-- Gene Recommendations - Evidence-based candidate gene suggestions
-- Experiment Design - Rigorous experimental protocol generation
-- Literature Search - PubMed-powered paper discovery
-- Paper Summarization - Automated literature synthesis
+- Research Chat - Scientific Q&A
+- Literature Search - PubMed integration
+- Gene Recommendations - Candidate gene suggestions
+- Experiment Design - Protocol generation
 - Image Analysis - Disease detection, phenotype measurement
-- Knowledge Graph - Entity relationships and inference
+- Knowledge Graph - Entity relationships
 
-## Development
+## API Docs
 
-```bash
-pip install -e ".[dev]"
-uvicorn app.main:app --reload --port 8001
-```
-
-## Docker
-
-```bash
-docker build -t pip-ai-service .
-docker run -p 8001:8001 pip-ai-service
-```
-
-## API Documentation
-
-Once running, visit:
-- Swagger UI: http://localhost:8001/docs
-- ReDoc: http://localhost:8001/redoc
+Once running, visit `/docs` for Swagger UI.
 
 ## License
 
