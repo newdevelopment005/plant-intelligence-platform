@@ -48,6 +48,7 @@ class ApiClient {
   ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
       ...this.getAuthHeaders(),
       ...(options.headers as Record<string, string> || {}),
     };
@@ -461,7 +462,7 @@ class ApiClient {
     const token = localStorage.getItem("access_token");
     const response = await fetch(`${this.baseUrl}/images`, {
       method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: data,
     });
     if (!response.ok) throw new Error("Upload failed");
@@ -497,7 +498,7 @@ class ApiClient {
   async downloadReport(id: string) {
     const token = localStorage.getItem("access_token");
     const response = await fetch(`${this.baseUrl}/reports/${id}/download`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     });
     if (!response.ok) throw new Error("Download failed");
     return response.blob();

@@ -37,6 +37,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ]
 
     async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         client_ip = self._get_client_ip(request)
         now = time.time()
 

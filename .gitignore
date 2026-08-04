@@ -77,3 +77,6 @@ next-env.d.ts
 
 # Ruff
 .ruff_cache/
+
+.vercel
+.env*

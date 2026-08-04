@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 
 import httpx
@@ -94,22 +95,41 @@ def create_app() -> FastAPI:
     application.include_router(reporting_router, prefix="/api/v1/reports", tags=["Reporting"])
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
 
-    @application.api_route("/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+    @application.api_route("/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+    @application.api_route("/api/v1/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     async def ai_proxy(path: str, request: Request):
-        """Proxy requests to the AI microservice."""
+        """Proxy requests to Ollama or AI microservice."""
+        if request.method == "OPTIONS":
+            return Response(status_code=204, headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "*",
+                "Access-Control-Allow-Headers": "*",
+            })
         body = await request.body()
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.request(
-                method=request.method,
-                url=f"{settings.AI_SERVICE_URL}/api/v1/{path}",
-                headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
-                content=body,
+        ollama_url = settings.OLLAMA_BASE_URL.rstrip("/")
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.request(
+                    method=request.method,
+                    url=f"{ollama_url}/{path}",
+                    headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
+                    content=body,
+                )
+            return Response(
+                content=resp.content,
+                status_code=resp.status_code,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Content-Type": resp.headers.get("content-type", "application/json"),
+                },
             )
-        return Response(
-            content=resp.content,
-            status_code=resp.status_code,
-            headers=dict(resp.headers),
-        )
+        except Exception as e:
+            logger.error("ai_proxy_error", error=str(e))
+            return Response(
+                content=json.dumps({"error": str(e)}).encode(),
+                status_code=502,
+                headers={"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
+            )
 
     return application
 

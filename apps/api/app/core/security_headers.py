@@ -20,6 +20,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        for key, value in self.HEADERS.items():
-            response.headers[key] = value
+        if request.method != "OPTIONS":
+            for key, value in self.HEADERS.items():
+                response.headers[key] = value
         return response
