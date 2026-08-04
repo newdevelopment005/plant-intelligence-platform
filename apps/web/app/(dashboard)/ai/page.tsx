@@ -37,12 +37,10 @@ export default function AIAssistantPage() {
       const token =
         typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 
-      const ngrokUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1$/, "");
-      const res = await fetch(`${ngrokUrl}/ai-proxy/chat/completions`, {
+      const res = await fetch("/api/ai-proxy/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
