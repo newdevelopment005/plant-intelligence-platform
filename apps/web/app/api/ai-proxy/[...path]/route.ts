@@ -18,9 +18,10 @@ async function proxyRequest(request: NextRequest, path: string) {
 
   headers.set("ngrok-skip-browser-warning", "true");
 
-  const body = request.method !== "GET" && request.method !== "HEAD"
-    ? await request.arrayBuffer()
-    : undefined;
+  const body =
+    request.method !== "GET" && request.method !== "HEAD"
+      ? await request.arrayBuffer()
+      : undefined;
 
   const response = await fetch(url, {
     method: request.method,
@@ -30,7 +31,10 @@ async function proxyRequest(request: NextRequest, path: string) {
   });
 
   const responseHeaders = new Headers();
-  responseHeaders.set("Content-Type", response.headers.get("content-type") || "application/json");
+  responseHeaders.set(
+    "Content-Type",
+    response.headers.get("content-type") || "application/json"
+  );
   responseHeaders.set("Access-Control-Allow-Origin", "*");
 
   return new NextResponse(response.body, {
@@ -41,34 +45,34 @@ async function proxyRequest(request: NextRequest, path: string) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string }> }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  return proxyRequest(request, path);
+  return proxyRequest(request, path.join("/"));
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string }> }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  return proxyRequest(request, path);
+  return proxyRequest(request, path.join("/"));
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string }> }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  return proxyRequest(request, path);
+  return proxyRequest(request, path.join("/"));
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string }> }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  return proxyRequest(request, path);
+  return proxyRequest(request, path.join("/"));
 }
 
 export async function OPTIONS() {
