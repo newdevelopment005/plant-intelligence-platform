@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Leaf } from "lucide-react";
 
 export default function Login() {
   const router = useRouter();
@@ -44,83 +49,93 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
-        <div>
-          <h1 className="text-center text-3xl font-bold text-gray-900">
-            Sign in
-          </h1>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Plant Intelligence Platform
+    <div className="flex min-h-screen">
+      {/* Left side - branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-primary/20 via-primary/10 to-background items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+        <div className="relative z-10 max-w-md px-8 text-center">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
+            <Leaf className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-primary">Plant Intelligence Platform</span>
+          </div>
+          <h2 className="mb-4 text-3xl font-bold">AI-Powered Plant Research</h2>
+          <p className="text-muted-foreground">
+            Manage germplasm, run experiments, analyze genomics, and chat with a local AI assistant.
+            Zero API costs. Full privacy.
           </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-              {error}
+      {/* Right side - form */}
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md space-y-8">
+          {/* Mobile logo */}
+          <div className="lg:hidden text-center">
+            <div className="mb-4 inline-flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+                <Leaf className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold">PIP</span>
             </div>
-          )}
-
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-              placeholder="you@example.com"
-            />
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-            />
+            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sign in to your research platform
+            </p>
           </div>
 
-          <div className="flex items-center justify-between">
-            <a
-              href="/forgot-password"
-              className="text-sm text-green-600 hover:text-green-500"
-            >
-              Forgot password?
-            </a>
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="researcher@lab.org"
+                className="h-11"
+              />
+            </div>
 
-        <p className="text-center text-sm text-gray-600">
-          Don&apos;t have an account?{" "}
-          <a href="/register" className="font-medium text-green-600 hover:text-green-500">
-            Register
-          </a>
-        </p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                className="h-11"
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full h-11">
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Create one
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

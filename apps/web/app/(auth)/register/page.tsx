@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Leaf } from "lucide-react";
 
 export default function Register() {
   const router = useRouter();
@@ -67,132 +72,144 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
-        <div>
-          <h1 className="text-center text-3xl font-bold text-gray-900">
-            Create Account
-          </h1>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Plant Intelligence Platform
+    <div className="flex min-h-screen">
+      {/* Left side - branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-gradient-to-br from-primary/20 via-primary/10 to-background items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-background" />
+        <div className="relative z-10 max-w-md px-8 text-center">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
+            <Leaf className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium text-primary">Plant Intelligence Platform</span>
+          </div>
+          <h2 className="mb-4 text-3xl font-bold">Join the Platform</h2>
+          <p className="text-muted-foreground">
+            Create your account and start managing research projects, germplasm, experiments, and literature — all with local AI.
           </p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-              {error}
+      {/* Right side - form */}
+      <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md space-y-6">
+          {/* Mobile logo */}
+          <div className="lg:hidden text-center">
+            <div className="mb-4 inline-flex items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+                <Leaf className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold">PIP</span>
             </div>
-          )}
-
-          <div>
-            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
-              Full Name *
-            </label>
-            <input
-              id="full_name"
-              name="full_name"
-              type="text"
-              required
-              value={formData.full_name}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-            />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email *
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              value={formData.email}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="institution" className="block text-sm font-medium text-gray-700">
-              Institution
-            </label>
-            <input
-              id="institution"
-              name="institution"
-              type="text"
-              value={formData.institution}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-              placeholder="University or Research Institute"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-              Department
-            </label>
-            <input
-              id="department"
-              name="department"
-              type="text"
-              value={formData.department}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password *
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              value={formData.password}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Min 8 characters, uppercase, lowercase, digit, special character
+            <h1 className="text-2xl font-bold tracking-tight">Create Account</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Start your research journey
             </p>
           </div>
 
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-              Confirm Password *
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-green-500"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-          >
-            {loading ? "Creating account..." : "Create Account"}
-          </button>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name *</Label>
+              <Input
+                id="full_name"
+                name="full_name"
+                type="text"
+                required
+                value={formData.full_name}
+                onChange={handleChange}
+                placeholder="Dr. Jane Smith"
+                className="h-11"
+              />
+            </div>
 
-        <p className="text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <a href="/login" className="font-medium text-green-600 hover:text-green-500">
-            Sign in
-          </a>
-        </p>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="researcher@lab.org"
+                className="h-11"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="institution">Institution</Label>
+                <Input
+                  id="institution"
+                  name="institution"
+                  type="text"
+                  value={formData.institution}
+                  onChange={handleChange}
+                  placeholder="University"
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="department">Department</Label>
+                <Input
+                  id="department"
+                  name="department"
+                  type="text"
+                  value={formData.department}
+                  onChange={handleChange}
+                  placeholder="Plant Sciences"
+                  className="h-11"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Min. 8 characters"
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Re-enter password"
+                className="h-11"
+              />
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full h-11">
+              {loading ? "Creating account..." : "Create Account"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
