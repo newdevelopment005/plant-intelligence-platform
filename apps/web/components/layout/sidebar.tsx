@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 import {
   LayoutDashboard,
   FolderKanban,
@@ -148,9 +148,7 @@ export function Sidebar() {
       {/* Footer */}
       <div className="border-t p-3">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">PI</AvatarFallback>
-          </Avatar>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">PI</div>
           {!collapsed && (
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium">Researcher</p>
