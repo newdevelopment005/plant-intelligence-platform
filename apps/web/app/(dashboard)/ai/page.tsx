@@ -54,7 +54,7 @@ export default function AIAssistantPage() {
             ...messages.map((m) => ({ role: m.role, content: m.content })),
             { role: "user", content: userMessage },
           ],
-          stream: false,
+          stream: true,
         }),
       });
 
@@ -62,11 +62,41 @@ export default function AIAssistantPage() {
         throw new Error(`API error: ${res.status}`);
       }
 
-      const data = await res.json();
-      const reply =
-        data.choices?.[0]?.message?.content ||
-        "Sorry, I could not generate a response.";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter((line) => line.startsWith("data: "));
+
+        for (const line of lines) {
+          const data = line.slice(6);
+          if (data === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantContent += delta;
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  role: "assistant",
+                  content: assistantContent,
+                };
+                return updated;
+              });
+            }
+          } catch {}
+        }
+      }
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,

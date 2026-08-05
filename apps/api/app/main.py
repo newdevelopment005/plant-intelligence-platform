@@ -5,7 +5,7 @@ import httpx
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from app.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -108,19 +108,32 @@ def create_app() -> FastAPI:
         body = await request.body()
         ollama_url = settings.OLLAMA_BASE_URL.rstrip("/")
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.request(
-                    method=request.method,
-                    url=f"{ollama_url}/{path}",
-                    headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
-                    content=body,
-                )
-            return Response(
-                content=resp.content,
+            client = httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0))
+            req = client.build_request(
+                method=request.method,
+                url=f"{ollama_url}/{path}",
+                headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
+                content=body,
+            )
+            resp = await client.send(req, stream=True)
+
+            content_type = resp.headers.get("content-type", "application/json")
+
+            async def stream_generator():
+                try:
+                    async for chunk in resp.aiter_bytes():
+                        yield chunk
+                finally:
+                    await resp.aclose()
+                    await client.aclose()
+
+            return StreamingResponse(
+                stream_generator(),
                 status_code=resp.status_code,
                 headers={
                     "Access-Control-Allow-Origin": "*",
-                    "Content-Type": resp.headers.get("content-type", "application/json"),
+                    "Content-Type": content_type,
+                    "Cache-Control": "no-cache",
                 },
             )
         except Exception as e:

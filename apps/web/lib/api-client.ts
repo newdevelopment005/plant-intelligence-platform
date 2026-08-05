@@ -41,10 +41,31 @@ class ApiClient {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
+  private async tryRefreshToken(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(`${this.baseUrl}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async request<T = any>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    _retried = false
   ): Promise<T> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -57,6 +78,13 @@ class ApiClient {
       ...options,
       headers,
     });
+
+    if (response.status === 401 && !_retried) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        return this.request<T>(endpoint, options, true);
+      }
+    }
 
     if (!response.ok) {
       const error: ApiError = await response.json().catch(() => ({
