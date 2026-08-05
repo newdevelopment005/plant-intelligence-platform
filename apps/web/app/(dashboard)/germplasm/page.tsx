@@ -40,8 +40,8 @@ export default function GermplasmPage() {
       const params = new URLSearchParams();
       if (searchQuery) params.set("search", searchQuery);
       const data = await apiClient.request(`/germplasm/species?${params.toString()}`);
-      setSpecies(data.items);
-      setSpeciesTotal(data.total);
+      setSpecies(data?.items ?? []);
+      setSpeciesTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load species");
     } finally {

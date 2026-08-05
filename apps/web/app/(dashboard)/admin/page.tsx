@@ -38,9 +38,9 @@ export default function AdminPage() {
         apiClient.adminListUsers(),
         apiClient.adminGetAuditLog(),
       ]);
-      setUsers(userData.items);
-      setTotal(userData.total);
-      setAuditLog(auditData.items);
+      setUsers(userData?.items ?? []);
+      setTotal(userData?.total ?? 0);
+      setAuditLog(auditData?.items ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }

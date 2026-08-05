@@ -58,8 +58,8 @@ export default function AccessionsPage() {
       if (speciesFilter) params.set("species_id", speciesFilter);
       if (statusFilter) params.set("status", statusFilter);
       const data = await apiClient.request(`/germplasm/accessions?${params.toString()}`);
-      setAccessions(data.items);
-      setTotal(data.total);
+      setAccessions(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load accessions");
     } finally {
@@ -70,7 +70,7 @@ export default function AccessionsPage() {
   const loadSpecies = async () => {
     try {
       const data = await apiClient.request("/germplasm/species?limit=100");
-      setSpeciesList(data.items);
+      setSpeciesList(data?.items ?? []);
     } catch (err) {
       console.error("Failed to load species:", err);
     }

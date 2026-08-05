@@ -27,8 +27,8 @@ export default function NotebookPage() {
     setLoading(true);
     try {
       const data = await apiClient.listNotebookEntries();
-      setEntries(data.items);
-      setTotal(data.total);
+      setEntries(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }

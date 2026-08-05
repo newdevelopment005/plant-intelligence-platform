@@ -29,8 +29,8 @@ export default function ImagesPage() {
     setLoading(true);
     try {
       const data = await apiClient.listImages();
-      setImages(data.items);
-      setTotal(data.total);
+      setImages(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }

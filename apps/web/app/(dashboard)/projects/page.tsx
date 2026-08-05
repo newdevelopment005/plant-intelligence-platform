@@ -40,8 +40,8 @@ export default function ProjectsPage() {
       const params = new URLSearchParams();
       if (searchQuery) params.set("search", searchQuery);
       const data = await apiClient.request(`/projects?${params.toString()}`);
-      setProjects(data.items);
-      setTotal(data.total);
+      setProjects(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load projects");
     } finally {

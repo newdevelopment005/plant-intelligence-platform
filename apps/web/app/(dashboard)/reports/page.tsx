@@ -26,8 +26,8 @@ export default function ReportsPage() {
     setLoading(true);
     try {
       const data = await apiClient.listReports();
-      setReports(data.items);
-      setTotal(data.total);
+      setReports(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }

@@ -27,8 +27,8 @@ export default function MolecularPage() {
     setLoading(true);
     try {
       const data = await apiClient.listMolecularExperiments();
-      setExperiments(data.items);
-      setTotal(data.total);
+      setExperiments(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }

@@ -42,9 +42,9 @@ export default function LimsPage() {
         apiClient.listSamples(),
         apiClient.listEquipment(),
       ]);
-      setSamples(sampleData.items);
-      setTotal(sampleData.total);
-      setEquipment(equipData.items);
+      setSamples(sampleData?.items ?? []);
+      setTotal(sampleData?.total ?? 0);
+      setEquipment(equipData?.items ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }

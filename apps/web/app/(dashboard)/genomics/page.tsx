@@ -31,8 +31,8 @@ export default function GenomicsPage() {
       const params: Record<string, string> = {};
       if (q) params.search = q;
       const data = await apiClient.listSequences(params);
-      setSequences(data.items);
-      setTotal(data.total);
+      setSequences(data?.items ?? []);
+      setTotal(data?.total ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally { setLoading(false); }
