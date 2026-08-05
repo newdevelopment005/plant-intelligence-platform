@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
 from app.core.exceptions import NotFoundException, ValidationException
 from app.modules.image_analysis.domain.interfaces import (
@@ -10,6 +11,12 @@ from app.modules.image_analysis.domain.models import (
     ImageAnalysisJobModel,
     PlantImageModel,
 )
+
+
+def _to_uuid(value: str | None) -> UUID | None:
+    if value is None:
+        return None
+    return UUID(value) if not isinstance(value, UUID) else value
 
 
 class UploadImageUseCase:
@@ -68,8 +75,8 @@ class UploadImageUseCase:
             magnification=magnification,
             tags=tags,
             metadata_json=metadata_json,
-            project_id=project_id,
-            created_by=user_id,
+            project_id=_to_uuid(project_id),
+            created_by=_to_uuid(user_id),
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -232,12 +239,12 @@ class CreateAnalysisJobUseCase:
             raise ValidationException(f"Invalid analysis type. Must be one of: {', '.join(valid_types)}")
 
         job = ImageAnalysisJobModel(
-            image_id=image_id,
+            image_id=_to_uuid(image_id),
             analysis_type=analysis_type,
             status="pending",
             parameters=parameters,
-            project_id=project_id or image.project_id,
-            created_by=user_id,
+            project_id=_to_uuid(project_id) if project_id else image.project_id,
+            created_by=_to_uuid(user_id),
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )

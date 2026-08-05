@@ -13,6 +13,23 @@ from app.core.health import router as health_router
 from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware
 from app.core.rate_limiter import RateLimitMiddleware
 from app.core.security_headers import SecurityHeadersMiddleware
+
+# Import all models to register them with SQLAlchemy metadata
+from app.modules.auth.domain import models as _auth_models  # noqa: F401
+from app.modules.project.domain import models as _project_models  # noqa: F401
+from app.modules.germplasm.domain import models as _germplasm_models  # noqa: F401
+from app.modules.phenotyping.domain import models as _phenotyping_models  # noqa: F401
+from app.modules.genomics.domain import models as _genomics_models  # noqa: F401
+from app.modules.molecular.domain import models as _molecular_models  # noqa: F401
+from app.modules.bioinformatics.domain import models as _bioinformatics_models  # noqa: F401
+from app.modules.literature.domain import models as _literature_models  # noqa: F401
+from app.modules.knowledge_graph.domain import models as _kg_models  # noqa: F401
+from app.modules.notebook.domain import models as _notebook_models  # noqa: F401
+from app.modules.lims.domain import models as _lims_models  # noqa: F401
+from app.modules.image_analysis.domain import models as _image_models  # noqa: F401
+from app.modules.reporting.domain import models as _reporting_models  # noqa: F401
+from app.modules.ai_assistant.domain import models as _ai_models  # noqa: F401
+
 from app.modules.admin.api.router import router as admin_router
 from app.modules.ai_assistant.api.router import router as ai_assistant_router
 from app.modules.auth.api.router import router as auth_router

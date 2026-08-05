@@ -27,7 +27,40 @@ from app.modules.knowledge_graph.domain.use_cases import (
     UpdateEntityUseCase,
 )
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
+
+
+def _entity_to_dict(e) -> dict:
+    return {
+        "id": str(e.id),
+        "name": e.name,
+        "entity_type": e.entity_type,
+        "description": e.description,
+        "source_module": e.source_module,
+        "source_id": e.source_id,
+        "properties": e.properties,
+        "tags": e.tags,
+        "project_id": str(e.project_id) if e.project_id else None,
+        "created_by": str(e.created_by),
+        "created_at": e.created_at.isoformat(),
+        "updated_at": e.updated_at.isoformat(),
+    }
+
+
+def _edge_to_dict(e) -> dict:
+    return {
+        "id": str(e.id),
+        "source_entity_id": str(e.source_entity_id),
+        "target_entity_id": str(e.target_entity_id),
+        "relation_type": e.relation_type,
+        "description": e.description,
+        "properties": e.properties,
+        "weight": e.weight,
+        "source": e.source,
+        "project_id": str(e.project_id) if e.project_id else None,
+        "created_by": str(e.created_by),
+        "created_at": e.created_at.isoformat(),
+    }
 
 
 # ────────────────────────── Entities ───────────────────────────────────
@@ -40,7 +73,7 @@ async def create_entity(
     from app.modules.knowledge_graph.infrastructure.entity_repository import EntityRepository
     repo = EntityRepository(db)
     uc = CreateEntityUseCase(entity_repo=repo)
-    return await uc.execute(
+    entity = await uc.execute(
         name=request.name,
         entity_type=request.entity_type,
         user_id=current_user["id"],
@@ -51,6 +84,7 @@ async def create_entity(
         tags=request.tags,
         project_id=request.project_id,
     )
+    return _entity_to_dict(entity)
 
 
 @router.get("/entities", response_model=PaginatedEntitiesResponse)
@@ -84,7 +118,8 @@ async def get_entity(
     from app.modules.knowledge_graph.infrastructure.entity_repository import EntityRepository
     repo = EntityRepository(db)
     uc = GetEntityUseCase(entity_repo=repo)
-    return await uc.execute(entity_id)
+    entity = await uc.execute(entity_id)
+    return _entity_to_dict(entity)
 
 
 @router.put("/entities/{entity_id}", response_model=EntityResponse)
@@ -97,7 +132,7 @@ async def update_entity(
     from app.modules.knowledge_graph.infrastructure.entity_repository import EntityRepository
     repo = EntityRepository(db)
     uc = UpdateEntityUseCase(entity_repo=repo)
-    return await uc.execute(
+    entity = await uc.execute(
         entity_id=entity_id,
         user_id=current_user["id"],
         name=request.name,
@@ -105,6 +140,7 @@ async def update_entity(
         properties=request.properties,
         tags=request.tags,
     )
+    return _entity_to_dict(entity)
 
 
 @router.delete("/entities/{entity_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -147,7 +183,7 @@ async def create_edge(
     edge_repo = EdgeRepository(db)
     entity_repo = EntityRepository(db)
     uc = CreateEdgeUseCase(edge_repo=edge_repo, entity_repo=entity_repo)
-    return await uc.execute(
+    edge = await uc.execute(
         source_entity_id=request.source_entity_id,
         target_entity_id=request.target_entity_id,
         relation_type=request.relation_type,
@@ -158,6 +194,7 @@ async def create_edge(
         source=request.source,
         project_id=request.project_id,
     )
+    return _edge_to_dict(edge)
 
 
 @router.get("/edges", response_model=PaginatedEdgesResponse)

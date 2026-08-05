@@ -15,8 +15,9 @@ async def _check_postgres() -> dict:
     try:
         from app.database import async_session_factory
 
+        from sqlalchemy import text
         async with async_session_factory() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
         return {"status": "healthy", "latency_ms": round((time.time() - start) * 1000, 2)}
     except Exception as e:
         logger.warning("health_check_postgres_failed", error=str(e))

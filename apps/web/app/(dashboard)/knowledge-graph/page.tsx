@@ -79,10 +79,17 @@ export default function KnowledgeGraphPage() {
                 <select value={form.entity_type} onChange={(e) => setForm({ ...form, entity_type: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2">
                   <option value="gene">Gene</option>
                   <option value="protein">Protein</option>
+                  <option value="trait">Trait</option>
+                  <option value="phenotype">Phenotype</option>
                   <option value="pathway">Pathway</option>
-                  <option value="disease">Disease</option>
                   <option value="species">Species</option>
-                  <option value="compound">Compound</option>
+                  <option value="disease">Disease</option>
+                  <option value="chemical">Chemical</option>
+                  <option value="marker">Marker</option>
+                  <option value="qtl">QTL</option>
+                  <option value="publication">Publication</option>
+                  <option value="experiment">Experiment</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div>

@@ -1,6 +1,8 @@
 import uuid
 from pathlib import Path
 
+from fastapi import UploadFile
+
 from app.config import settings
 
 
@@ -15,3 +17,11 @@ def get_upload_path(module: str, filename: str) -> Path:
 def get_file_url(module: str, filename: str) -> str:
     path = get_upload_path(module, filename)
     return f"/storage/{module}/{path.name}"
+
+
+async def save_uploaded_file(file: UploadFile, module: str) -> str:
+    filename = file.filename or "upload"
+    path = get_upload_path(module, filename)
+    content = await file.read()
+    path.write_bytes(content)
+    return get_file_url(module, path.name)

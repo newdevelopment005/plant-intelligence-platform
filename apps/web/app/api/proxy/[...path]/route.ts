@@ -24,29 +24,37 @@ async function proxyRequest(request: NextRequest, path: string) {
   const searchParams = request.nextUrl.searchParams.toString();
   const fullUrl = searchParams ? `${url}?${searchParams}` : url;
 
-  const response = await fetch(fullUrl, {
-    method: request.method,
-    headers,
-    body,
-    signal: AbortSignal.timeout(60000),
-  });
+  try {
+    const response = await fetch(fullUrl, {
+      method: request.method,
+      headers,
+      body,
+      signal: AbortSignal.timeout(60000),
+    });
 
-  const contentType = response.headers.get("content-type") || "application/json";
-  let responseBody: BodyInit | null = response.body;
+    const contentType = response.headers.get("content-type") || "application/json";
+    let responseBody: BodyInit | null = response.body;
 
-  if (!responseBody && response.status !== 204 && response.status !== 304) {
-    const text = await response.text();
-    responseBody = text || null;
+    if (!responseBody && response.status !== 204 && response.status !== 304) {
+      const text = await response.text();
+      responseBody = text || null;
+    }
+
+    return new Response(responseBody, {
+      status: response.status,
+      headers: {
+        "Content-Type": contentType,
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-cache",
+      },
+    });
+  } catch (error) {
+    console.error("Proxy error:", { url: fullUrl, error: String(error) });
+    return new Response(
+      JSON.stringify({ error: { code: "PROXY_ERROR", message: "Failed to reach backend service" } }),
+      { status: 502, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+    );
   }
-
-  return new Response(responseBody, {
-    status: response.status,
-    headers: {
-      "Content-Type": contentType,
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "no-cache",
-    },
-  });
 }
 
 export async function GET(

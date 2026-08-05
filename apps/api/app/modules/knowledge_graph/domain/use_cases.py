@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from uuid import UUID
 
 from app.core.exceptions import NotFoundException, ValidationException
 from app.modules.knowledge_graph.domain.interfaces import (
@@ -6,6 +7,12 @@ from app.modules.knowledge_graph.domain.interfaces import (
     EntityRepositoryInterface,
 )
 from app.modules.knowledge_graph.domain.models import EdgeModel, EntityModel
+
+
+def _to_uuid(value: str | None) -> UUID | None:
+    if value is None:
+        return None
+    return UUID(value) if not isinstance(value, UUID) else value
 
 
 class CreateEntityUseCase:
@@ -46,8 +53,8 @@ class CreateEntityUseCase:
             source_id=source_id,
             properties=properties,
             tags=tags,
-            project_id=project_id,
-            created_by=user_id,
+            project_id=_to_uuid(project_id),
+            created_by=_to_uuid(user_id),
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -230,15 +237,15 @@ class CreateEdgeUseCase:
             raise ValidationException("Self-referencing edges are not allowed")
 
         edge = EdgeModel(
-            source_entity_id=source_entity_id,
-            target_entity_id=target_entity_id,
+            source_entity_id=_to_uuid(source_entity_id),
+            target_entity_id=_to_uuid(target_entity_id),
             relation_type=relation_type.strip(),
             description=description.strip() if description else None,
             properties=properties,
             weight=weight,
             source=source,
-            project_id=project_id,
-            created_by=user_id,
+            project_id=_to_uuid(project_id),
+            created_by=_to_uuid(user_id),
             created_at=datetime.now(UTC),
         )
 

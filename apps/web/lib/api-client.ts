@@ -488,12 +488,15 @@ class ApiClient {
 
   async uploadImage(data: FormData) {
     const token = localStorage.getItem("access_token");
-    const response = await fetch(`${this.baseUrl}/images`, {
+    const response = await fetch(`${this.baseUrl}/images/upload`, {
       method: "POST",
       headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: data,
     });
-    if (!response.ok) throw new Error("Upload failed");
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: { message: "Upload failed" } }));
+      throw new Error(error.error?.message || `HTTP ${response.status}`);
+    }
     return response.json();
   }
 

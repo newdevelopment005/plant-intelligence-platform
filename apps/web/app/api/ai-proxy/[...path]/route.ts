@@ -21,21 +21,29 @@ async function proxyRequest(request: NextRequest, path: string) {
       ? await request.arrayBuffer()
       : undefined;
 
-  const response = await fetch(url, {
-    method: request.method,
-    headers,
-    body,
-    signal: AbortSignal.timeout(300000),
-  });
+  try {
+    const response = await fetch(url, {
+      method: request.method,
+      headers,
+      body,
+      signal: AbortSignal.timeout(300000),
+    });
 
-  return new Response(response.body, {
-    status: response.status,
-    headers: {
-      "Content-Type": response.headers.get("content-type") || "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "no-cache",
-    },
-  });
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        "Content-Type": response.headers.get("content-type") || "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-cache",
+      },
+    });
+  } catch (error) {
+    console.error("AI proxy error:", { url, error: String(error) });
+    return new Response(
+      JSON.stringify({ error: { code: "PROXY_ERROR", message: "Failed to reach AI service" } }),
+      { status: 502, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+    );
+  }
 }
 
 export async function GET(
