@@ -6,7 +6,7 @@ class CreateReportRequest(BaseModel):
     description: str | None = Field(None, max_length=5000)
     report_type: str = Field(
         ...,
-        pattern="^(phenotyping|genotyping|germplasm|experiment|project_summary|custom|statistical|comparative|temporal|geospatial)$",
+        pattern="^(phenotyping|genotyping|germplasm|experiment|project_summary|custom|statistical|comparative|temporal|geospatial|summary|genomics|literature|project)$",
     )
     format: str = Field("pdf", pattern="^(pdf|csv|json|xlsx|html|docx)$")
     data_source: str | None = Field(None, max_length=100)
