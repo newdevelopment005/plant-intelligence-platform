@@ -26,6 +26,8 @@ import {
   LogOut,
   Leaf,
   Search,
+  Users,
+  Share2,
 } from "lucide-react";
 
 const navigation = [
@@ -42,6 +44,8 @@ const navigation = [
   { name: "LIMS", href: "/lims", icon: TestTubes },
   { name: "Images", href: "/images", icon: Image },
   { name: "Reports", href: "/reports", icon: FileText },
+  { name: "Teams", href: "/teams", icon: Users },
+  { name: "Shared", href: "/shared", icon: Share2 },
 ];
 
 const secondaryNav = [

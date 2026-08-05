@@ -232,6 +232,7 @@ async def update_primer(
     uc = UpdatePrimerUseCase(primer_repo=repo)
     return await uc.execute(
         primer_id=primer_id,
+        user_id=current_user["id"],
         name=request.name,
         description=request.description,
         sequence=request.sequence,
@@ -255,7 +256,7 @@ async def delete_primer(
     from app.modules.molecular.infrastructure.primer_repository import PrimerRepository
     repo = PrimerRepository(db)
     uc = DeletePrimerUseCase(primer_repo=repo)
-    await uc.execute(primer_id)
+    await uc.execute(primer_id=primer_id, user_id=current_user["id"])
 
 
 # ────────────────────────── Constructs ─────────────────────────────────
@@ -350,6 +351,7 @@ async def update_construct(
     uc = UpdateConstructUseCase(construct_repo=repo)
     return await uc.execute(
         construct_id=construct_id,
+        user_id=current_user["id"],
         name=request.name,
         description=request.description,
         construct_type=request.construct_type,
@@ -378,4 +380,4 @@ async def delete_construct(
     from app.modules.molecular.infrastructure.construct_repository import ConstructRepository
     repo = ConstructRepository(db)
     uc = DeleteConstructUseCase(construct_repo=repo)
-    await uc.execute(construct_id)
+    await uc.execute(construct_id=construct_id, user_id=current_user["id"])

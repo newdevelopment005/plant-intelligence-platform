@@ -68,6 +68,14 @@ export default function AccessionDetailPage() {
     seed_count: "",
     storage_conditions: "",
   });
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    collection_source: "",
+    collection_location: "",
+    availability_status: "available",
+  });
 
   useEffect(() => {
     loadAccession();
@@ -107,6 +115,45 @@ export default function AccessionDetailPage() {
       loadAccession();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add storage");
+    }
+  };
+
+  const startEdit = () => {
+    if (!accession) return;
+    setEditing(true);
+    setEditForm({
+      name: accession.name,
+      description: accession.description || "",
+      collection_source: accession.collection_source || "",
+      collection_location: accession.collection_location || "",
+      availability_status: accession.availability_status,
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiClient.updateAccession(accessionId, {
+        name: editForm.name,
+        description: editForm.description || undefined,
+        collection_source: editForm.collection_source || undefined,
+        collection_location: editForm.collection_location || undefined,
+        availability_status: editForm.availability_status,
+      });
+      setEditing(false);
+      loadAccession();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this accession? This action cannot be undone.")) return;
+    try {
+      await apiClient.deleteAccession(accessionId);
+      router.push("/germplasm/accessions");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -152,20 +199,48 @@ export default function AccessionDetailPage() {
         </Link>
         <div className="flex items-start justify-between mt-2">
           <div>
-            <h1 className="text-3xl font-bold">{accession.name}</h1>
-            <p className="text-muted-foreground">{accession.accession_number}</p>
+            {editing ? (
+              <form onSubmit={handleUpdate} className="space-y-3">
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-2xl font-bold" placeholder="Name" />
+                <input type="text" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Description" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input type="text" value={editForm.collection_source} onChange={(e) => setEditForm({ ...editForm, collection_source: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Collection source" />
+                  <input type="text" value={editForm.collection_location} onChange={(e) => setEditForm({ ...editForm, collection_location: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Collection location" />
+                </div>
+                <select value={editForm.availability_status} onChange={(e) => setEditForm({ ...editForm, availability_status: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm">
+                  <option value="available">Available</option>
+                  <option value="limited">Limited</option>
+                  <option value="unavailable">Unavailable</option>
+                </select>
+                <div className="flex gap-2">
+                  <button type="submit" className="text-sm text-green-600 hover:underline">Save</button>
+                  <button type="button" onClick={() => setEditing(false)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold">{accession.name}</h1>
+                <p className="text-muted-foreground">{accession.accession_number}</p>
+              </>
+            )}
           </div>
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-medium ${
-              accession.availability_status === "available"
-                ? "bg-green-100 text-green-800"
-                : accession.availability_status === "limited"
-                ? "bg-yellow-100 text-yellow-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
-            {accession.availability_status}
-          </span>
+          {!editing && (
+            <div className="flex items-center gap-3">
+              <span
+                className={`rounded-full px-3 py-1 text-sm font-medium ${
+                  accession.availability_status === "available"
+                    ? "bg-green-100 text-green-800"
+                    : accession.availability_status === "limited"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-red-100 text-red-800"
+                }`}
+              >
+                {accession.availability_status}
+              </span>
+              <button onClick={startEdit} className="text-sm text-blue-600 hover:underline">Edit</button>
+              <button onClick={handleDelete} className="text-sm text-red-600 hover:underline">Delete</button>
+            </div>
+          )}
         </div>
       </div>
 

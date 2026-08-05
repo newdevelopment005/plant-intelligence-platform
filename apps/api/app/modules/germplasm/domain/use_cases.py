@@ -745,10 +745,13 @@ class DeleteGermplasmImageUseCase:
     def __init__(self, image_repo: GermplasmImageRepositoryInterface):
         self.image_repo = image_repo
 
-    async def execute(self, image_id: str) -> bool:
+    async def execute(self, image_id: str, user_id: str) -> bool:
         image = await self.image_repo.get_by_id(image_id)
         if not image:
             raise NotFoundException("Image", image_id)
+
+        if str(image.uploaded_by) != user_id:
+            raise ValidationException("Only the creator can delete this image")
 
         return await self.image_repo.delete(image_id)
 
@@ -806,9 +809,12 @@ class DeleteGermplasmFileUseCase:
     def __init__(self, file_repo: GermplasmFileRepositoryInterface):
         self.file_repo = file_repo
 
-    async def execute(self, file_id: str) -> bool:
+    async def execute(self, file_id: str, user_id: str) -> bool:
         file = await self.file_repo.get_by_id(file_id)
         if not file:
             raise NotFoundException("File", file_id)
+
+        if str(file.uploaded_by) != user_id:
+            raise ValidationException("Only the creator can delete this file")
 
         return await self.file_repo.delete(file_id)

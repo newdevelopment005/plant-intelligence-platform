@@ -28,6 +28,8 @@ export default function GermplasmPage() {
     genus: "",
     species_epithet: "",
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ common_name: "", scientific_name: "", family: "", genus: "" });
 
   useEffect(() => {
     loadSpecies();
@@ -72,6 +74,38 @@ export default function GermplasmPage() {
       loadSpecies();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create species");
+    }
+  };
+
+  const startEdit = (s: Species) => {
+    setEditingId(s.id);
+    setEditForm({ common_name: s.common_name, scientific_name: s.scientific_name, family: s.family || "", genus: s.genus || "" });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateSpecies(editingId, {
+        common_name: editForm.common_name,
+        scientific_name: editForm.scientific_name,
+        family: editForm.family || undefined,
+        genus: editForm.genus || undefined,
+      });
+      setEditingId(null);
+      loadSpecies();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this species?")) return;
+    try {
+      await apiClient.deleteSpecies(id);
+      loadSpecies();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -214,18 +248,53 @@ export default function GermplasmPage() {
                     <th className="px-4 py-3 text-left text-sm font-medium">Family</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Genus</th>
                     <th className="px-4 py-3 text-left text-sm font-medium">Added</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {species.map((s) => (
                     <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium">{s.common_name}</td>
-                      <td className="px-4 py-3 text-sm italic text-muted-foreground">{s.scientific_name}</td>
-                      <td className="px-4 py-3 text-sm">{s.family || "-"}</td>
-                      <td className="px-4 py-3 text-sm">{s.genus || "-"}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {new Date(s.created_at).toLocaleDateString()}
-                      </td>
+                      {editingId === s.id ? (
+                        <>
+                          <td className="px-4 py-3">
+                            <input type="text" value={editForm.common_name} onChange={(e) => setEditForm({ ...editForm, common_name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input type="text" value={editForm.scientific_name} onChange={(e) => setEditForm({ ...editForm, scientific_name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm italic" />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input type="text" value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input type="text" value={editForm.genus} onChange={(e) => setEditForm({ ...editForm, genus: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                            {new Date(s.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              <button onClick={handleUpdate} className="text-xs text-green-600 hover:underline">Save</button>
+                              <button onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 text-sm font-medium">{s.common_name}</td>
+                          <td className="px-4 py-3 text-sm italic text-muted-foreground">{s.scientific_name}</td>
+                          <td className="px-4 py-3 text-sm">{s.family || "-"}</td>
+                          <td className="px-4 py-3 text-sm">{s.genus || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                            {new Date(s.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              <button onClick={() => startEdit(s)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                              <button onClick={() => handleDelete(s.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                            </div>
+                          </td>
+                        </>
+                      )}
                     </tr>
                   ))}
                 </tbody>

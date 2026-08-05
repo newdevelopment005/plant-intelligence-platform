@@ -348,6 +348,7 @@ class UpdatePrimerUseCase:
     async def execute(
         self,
         primer_id: str,
+        user_id: str,
         name: str | None = None,
         description: str | None = None,
         sequence: str | None = None,
@@ -362,6 +363,9 @@ class UpdatePrimerUseCase:
         primer = await self.primer_repo.get_by_id(primer_id)
         if not primer:
             raise NotFoundException("Primer", primer_id)
+
+        if str(primer.created_by) != user_id:
+            raise ValidationException("Only the creator can update this primer")
 
         if name is not None:
             if not name.strip():
@@ -403,10 +407,13 @@ class DeletePrimerUseCase:
     def __init__(self, primer_repo: PrimerRepositoryInterface):
         self.primer_repo = primer_repo
 
-    async def execute(self, primer_id: str) -> bool:
+    async def execute(self, primer_id: str, user_id: str) -> bool:
         primer = await self.primer_repo.get_by_id(primer_id)
         if not primer:
             raise NotFoundException("Primer", primer_id)
+
+        if str(primer.created_by) != user_id:
+            raise ValidationException("Only the creator can delete this primer")
 
         return await self.primer_repo.delete(primer_id)
 
@@ -544,6 +551,7 @@ class UpdateConstructUseCase:
     async def execute(
         self,
         construct_id: str,
+        user_id: str,
         name: str | None = None,
         description: str | None = None,
         construct_type: str | None = None,
@@ -560,6 +568,9 @@ class UpdateConstructUseCase:
         construct = await self.construct_repo.get_by_id(construct_id)
         if not construct:
             raise NotFoundException("Construct", construct_id)
+
+        if str(construct.created_by) != user_id:
+            raise ValidationException("Only the creator can update this construct")
 
         if name is not None:
             if not name.strip():
@@ -600,9 +611,12 @@ class DeleteConstructUseCase:
     def __init__(self, construct_repo: ConstructRepositoryInterface):
         self.construct_repo = construct_repo
 
-    async def execute(self, construct_id: str) -> bool:
+    async def execute(self, construct_id: str, user_id: str) -> bool:
         construct = await self.construct_repo.get_by_id(construct_id)
         if not construct:
             raise NotFoundException("Construct", construct_id)
+
+        if str(construct.created_by) != user_id:
+            raise ValidationException("Only the creator can delete this construct")
 
         return await self.construct_repo.delete(construct_id)

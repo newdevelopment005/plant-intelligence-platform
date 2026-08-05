@@ -29,6 +29,8 @@ from app.modules.lims.domain import models as _lims_models  # noqa: F401
 from app.modules.image_analysis.domain import models as _image_models  # noqa: F401
 from app.modules.reporting.domain import models as _reporting_models  # noqa: F401
 from app.modules.ai_assistant.domain import models as _ai_models  # noqa: F401
+from app.modules.sharing.domain import models as _sharing_models  # noqa: F401
+from app.modules.team.domain import models as _team_models  # noqa: F401
 
 from app.modules.admin.api.router import router as admin_router
 from app.modules.ai_assistant.api.router import router as ai_assistant_router
@@ -45,6 +47,8 @@ from app.modules.notebook.api.router import router as notebook_router
 from app.modules.phenotyping.api.router import router as phenotyping_router
 from app.modules.project.api.router import router as project_router
 from app.modules.reporting.api.router import router as reporting_router
+from app.modules.sharing.api.router import router as sharing_router
+from app.modules.team.api.router import router as team_router
 
 structlog.configure(
     processors=[
@@ -110,6 +114,8 @@ def create_app() -> FastAPI:
     application.include_router(lims_router, prefix="/api/v1/lims", tags=["LIMS"])
     application.include_router(image_analysis_router, prefix="/api/v1/images", tags=["Image Analysis"])
     application.include_router(reporting_router, prefix="/api/v1/reports", tags=["Reporting"])
+    application.include_router(sharing_router, prefix="/api/v1/sharing", tags=["Sharing"])
+    application.include_router(team_router, prefix="/api/v1/teams", tags=["Teams"])
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
 
     @application.api_route("/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])

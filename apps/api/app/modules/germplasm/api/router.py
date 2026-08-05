@@ -695,7 +695,7 @@ async def delete_germplasm_image(
 ):
     repos = _get_repos(db)
     use_case = DeleteGermplasmImageUseCase(repos["image"])
-    await use_case.execute(image_id)
+    await use_case.execute(image_id=image_id, user_id=str(current_user["id"]))
     return {"message": "Image deleted successfully"}
 
 
@@ -783,5 +783,5 @@ async def delete_germplasm_file(
 ):
     repos = _get_repos(db)
     use_case = DeleteGermplasmFileUseCase(repos["file"])
-    await use_case.execute(file_id)
+    await use_case.execute(file_id=file_id, user_id=str(current_user["id"]))
     return {"message": "File deleted successfully"}

@@ -22,6 +22,8 @@ export default function LiteraturePage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", authors: "", journal: "", doi: "", year: "", abstract: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", authors: "", journal: "", doi: "", year: "", abstract: "" });
 
   useEffect(() => { loadPapers(); }, []);
 
@@ -54,6 +56,47 @@ export default function LiteraturePage() {
       loadPapers();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const startEdit = (paper: Paper) => {
+    setEditingId(paper.id);
+    setEditForm({
+      title: paper.title,
+      authors: paper.authors?.join(", ") || "",
+      journal: paper.journal || "",
+      doi: paper.doi || "",
+      year: paper.year?.toString() || "",
+      abstract: "",
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updatePaper(editingId, {
+        title: editForm.title,
+        authors: editForm.authors ? editForm.authors.split(",").map((a) => a.trim()) : undefined,
+        journal: editForm.journal || undefined,
+        doi: editForm.doi || undefined,
+        year: editForm.year ? parseInt(editForm.year) : undefined,
+        abstract: editForm.abstract || undefined,
+      });
+      setEditingId(null);
+      loadPapers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this paper?")) return;
+    try {
+      await apiClient.deletePaper(id);
+      loadPapers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -124,13 +167,38 @@ export default function LiteraturePage() {
         <div className="space-y-4">
           {papers.map((paper) => (
             <div key={paper.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow">
-              <h3 className="font-semibold text-lg mb-1">{paper.title}</h3>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                {paper.authors && <span>{paper.authors.slice(0, 3).join(", ")}{paper.authors.length > 3 ? " et al." : ""}</span>}
-                {paper.journal && <span>{paper.journal}</span>}
-                {paper.year && <span>({paper.year})</span>}
-              </div>
-              {paper.doi && <p className="text-xs text-blue-600 mt-1">DOI: {paper.doi}</p>}
+              {editingId === paper.id ? (
+                <form onSubmit={handleUpdate} className="space-y-3">
+                  <input type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Title" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="text" value={editForm.authors} onChange={(e) => setEditForm({ ...editForm, authors: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Authors (comma separated)" />
+                    <input type="text" value={editForm.journal} onChange={(e) => setEditForm({ ...editForm, journal: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Journal" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="text" value={editForm.doi} onChange={(e) => setEditForm({ ...editForm, doi: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="DOI" />
+                    <input type="number" value={editForm.year} onChange={(e) => setEditForm({ ...editForm, year: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Year" />
+                  </div>
+                  <textarea value={editForm.abstract} onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" rows={2} placeholder="Abstract" />
+                  <div className="flex gap-2">
+                    <button type="submit" className="text-sm text-green-600 hover:underline">Save</button>
+                    <button type="button" onClick={() => setEditingId(null)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-lg mb-1">{paper.title}</h3>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    {paper.authors && <span>{paper.authors.slice(0, 3).join(", ")}{paper.authors.length > 3 ? " et al." : ""}</span>}
+                    {paper.journal && <span>{paper.journal}</span>}
+                    {paper.year && <span>({paper.year})</span>}
+                  </div>
+                  {paper.doi && <p className="text-xs text-blue-600 mt-1">DOI: {paper.doi}</p>}
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => startEdit(paper)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(paper.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

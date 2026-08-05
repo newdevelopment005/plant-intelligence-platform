@@ -43,6 +43,8 @@ export default function AccessionsPage() {
     longitude: "",
     tags: "",
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", availability_status: "available" });
 
   useEffect(() => {
     loadAccessions();
@@ -112,6 +114,37 @@ export default function AccessionsPage() {
       loadAccessions();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create accession");
+    }
+  };
+
+  const startEdit = (a: Accession) => {
+    setEditingId(a.id);
+    setEditForm({ name: a.name, description: a.description || "", availability_status: a.availability_status });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateAccession(editingId, {
+        name: editForm.name,
+        description: editForm.description || undefined,
+        availability_status: editForm.availability_status,
+      });
+      setEditingId(null);
+      loadAccessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this accession?")) return;
+    try {
+      await apiClient.deleteAccession(id);
+      loadAccessions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -306,6 +339,7 @@ export default function AccessionsPage() {
                 <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Location</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Added</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -316,17 +350,45 @@ export default function AccessionsPage() {
                       {a.accession_number}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-sm">{a.name}</td>
                   <td className="px-4 py-3 text-sm">
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[a.availability_status] || ""}`}>
-                      {a.availability_status}
-                    </span>
+                    {editingId === a.id ? (
+                      <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
+                    ) : (
+                      a.name
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {editingId === a.id ? (
+                      <select value={editForm.availability_status} onChange={(e) => setEditForm({ ...editForm, availability_status: e.target.value })} className="w-full rounded border px-2 py-1 text-sm">
+                        <option value="available">Available</option>
+                        <option value="limited">Limited</option>
+                        <option value="unavailable">Unavailable</option>
+                        <option value="reserved">Reserved</option>
+                      </select>
+                    ) : (
+                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[a.availability_status] || ""}`}>
+                        {a.availability_status}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {a.latitude && a.longitude ? `${a.latitude.toFixed(2)}, ${a.longitude.toFixed(2)}` : "-"}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {new Date(a.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    {editingId === a.id ? (
+                      <div className="flex gap-2">
+                        <button onClick={handleUpdate} className="text-xs text-green-600 hover:underline">Save</button>
+                        <button onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(a)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                        <button onClick={() => handleDelete(a.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

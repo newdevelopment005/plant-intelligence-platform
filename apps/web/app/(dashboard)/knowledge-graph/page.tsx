@@ -20,6 +20,8 @@ export default function KnowledgeGraphPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", entity_type: "gene", description: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", entity_type: "gene", description: "" });
 
   useEffect(() => { loadEntities(); }, []);
 
@@ -45,6 +47,33 @@ export default function KnowledgeGraphPage() {
       loadEntities();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const startEdit = (entity: Entity) => {
+    setEditingId(entity.id);
+    setEditForm({ name: entity.name, entity_type: entity.entity_type, description: entity.description || "" });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateKnowledgeEntity(editingId, editForm);
+      setEditingId(null);
+      loadEntities();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this entity?")) return;
+    try {
+      await apiClient.deleteKnowledgeEntity(id);
+      loadEntities();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -113,12 +142,44 @@ export default function KnowledgeGraphPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {entities.map((entity) => (
             <div key={entity.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-lg">{entity.name}</h3>
-                <span className="rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800">{entity.entity_type}</span>
-              </div>
-              {entity.description && <p className="text-sm text-muted-foreground line-clamp-2">{entity.description}</p>}
-              {entity.source_module && <p className="text-xs text-muted-foreground mt-2">Source: {entity.source_module}</p>}
+              {editingId === entity.id ? (
+                <form onSubmit={handleUpdate} className="space-y-3">
+                  <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Name" />
+                  <select value={editForm.entity_type} onChange={(e) => setEditForm({ ...editForm, entity_type: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm">
+                    <option value="gene">Gene</option>
+                    <option value="protein">Protein</option>
+                    <option value="trait">Trait</option>
+                    <option value="phenotype">Phenotype</option>
+                    <option value="pathway">Pathway</option>
+                    <option value="species">Species</option>
+                    <option value="disease">Disease</option>
+                    <option value="chemical">Chemical</option>
+                    <option value="marker">Marker</option>
+                    <option value="qtl">QTL</option>
+                    <option value="publication">Publication</option>
+                    <option value="experiment">Experiment</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" rows={2} placeholder="Description" />
+                  <div className="flex gap-2">
+                    <button type="submit" className="text-sm text-green-600 hover:underline">Save</button>
+                    <button type="button" onClick={() => setEditingId(null)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-lg">{entity.name}</h3>
+                    <span className="rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800">{entity.entity_type}</span>
+                  </div>
+                  {entity.description && <p className="text-sm text-muted-foreground line-clamp-2">{entity.description}</p>}
+                  {entity.source_module && <p className="text-xs text-muted-foreground mt-2">Source: {entity.source_module}</p>}
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => startEdit(entity)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(entity.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

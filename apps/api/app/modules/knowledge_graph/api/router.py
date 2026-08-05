@@ -230,7 +230,7 @@ async def delete_edge(
     from app.modules.knowledge_graph.infrastructure.edge_repository import EdgeRepository
     repo = EdgeRepository(db)
     uc = DeleteEdgeUseCase(edge_repo=repo)
-    await uc.execute(edge_id)
+    await uc.execute(edge_id=edge_id, user_id=current_user["id"])
 
 
 @router.get("/relations", response_model=list[str])

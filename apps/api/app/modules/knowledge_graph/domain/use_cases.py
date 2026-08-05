@@ -305,10 +305,14 @@ class DeleteEdgeUseCase:
     def __init__(self, edge_repo: EdgeRepositoryInterface):
         self.edge_repo = edge_repo
 
-    async def execute(self, edge_id: str) -> bool:
+    async def execute(self, edge_id: str, user_id: str) -> bool:
         edge = await self.edge_repo.get_by_id(edge_id)
         if not edge:
             raise NotFoundException("Edge", edge_id)
+
+        if str(edge.created_by) != user_id:
+            raise ValidationException("Only the creator can delete this edge")
+
         return await self.edge_repo.delete(edge_id)
 
 

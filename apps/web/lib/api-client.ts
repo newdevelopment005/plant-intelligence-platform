@@ -451,6 +451,91 @@ class ApiClient {
   }
 
   // =============================================
+  // Knowledge Graph (Update/Delete)
+  // =============================================
+  async updateKnowledgeEntity(id: string, data: any) {
+    return this.request<any>(`/knowledge-graph/entities/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteKnowledgeEntity(id: string) {
+    return this.request<any>(`/knowledge-graph/entities/${id}`, { method: "DELETE" });
+  }
+
+  async deleteEdge(id: string) {
+    return this.request<any>(`/knowledge-graph/edges/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Images (Update/Delete)
+  // =============================================
+  async updateImage(id: string, data: { name?: string; image_type?: string }) {
+    return this.request<any>(`/images/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteImage(id: string) {
+    return this.request<any>(`/images/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Germplasm (Update/Delete)
+  // =============================================
+  async updateSpecies(id: string, data: { common_name?: string; scientific_name?: string; family?: string; genus?: string }) {
+    return this.request<any>(`/germplasm/species/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSpecies(id: string) {
+    return this.request<any>(`/germplasm/species/${id}`, { method: "DELETE" });
+  }
+
+  async updateAccession(id: string, data: any) {
+    return this.request<any>(`/germplasm/accessions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteAccession(id: string) {
+    return this.request<any>(`/germplasm/accessions/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Literature (Update/Delete)
+  // =============================================
+  async updatePaper(id: string, data: any) {
+    return this.request<any>(`/literature/papers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePaper(id: string) {
+    return this.request<any>(`/literature/papers/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Molecular (Update/Delete)
+  // =============================================
+  async updateMolecularExperiment(id: string, data: any) {
+    return this.request<any>(`/molecular/experiments/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMolecularExperiment(id: string) {
+    return this.request<any>(`/molecular/experiments/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
   // LIMS
   // =============================================
   async listSamples(params?: Record<string, string>) {
@@ -565,6 +650,63 @@ class ApiClient {
 
   async adminGetStats() {
     return this.request<any>("/admin/stats");
+  }
+
+  // =============================================
+  // Sharing
+  // =============================================
+  async shareItem(data: { item_type: string; item_id: string; visibility: string; user_ids?: string[]; permission?: string }) {
+    return this.request<any>("/sharing/share", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSharedWithMe() {
+    return this.request<{ items: any[] }>("/sharing/shared-with-me");
+  }
+
+  async getMyShares() {
+    return this.request<{ items: any[] }>("/sharing/my-shares");
+  }
+
+  async revokeShare(shareId: string) {
+    return this.request<void>(`/sharing/${shareId}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Teams
+  // =============================================
+  async createTeam(data: { name: string; description?: string }) {
+    return this.request<any>("/teams", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listTeams() {
+    return this.request<{ items: any[] }>("/teams");
+  }
+
+  async getTeam(teamId: string) {
+    return this.request<any>(`/teams/${teamId}`);
+  }
+
+  async addTeamMember(teamId: string, data: { user_id: string; role?: string }) {
+    return this.request<any>(`/teams/${teamId}/members`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async removeTeamMember(teamId: string, targetUserId: string) {
+    return this.request<void>(`/teams/${teamId}/members/${targetUserId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async deleteTeam(teamId: string) {
+    return this.request<void>(`/teams/${teamId}`, { method: "DELETE" });
   }
 }
 
