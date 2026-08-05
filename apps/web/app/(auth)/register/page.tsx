@@ -43,7 +43,7 @@ export default function Register() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/auth/register`,
+        `/api/proxy/auth/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

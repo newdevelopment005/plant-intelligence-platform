@@ -22,7 +22,7 @@ export default function Login() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/auth/login`,
+        `/api/proxy/auth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
