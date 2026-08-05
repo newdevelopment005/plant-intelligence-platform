@@ -1,5 +1,6 @@
 import structlog
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 logger = structlog.get_logger()
@@ -39,6 +40,24 @@ class RateLimitException(AppException):
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        errors = exc.errors()
+        messages = []
+        for err in errors:
+            loc = " -> ".join(str(l) for l in err.get("loc", []))
+            msg = err.get("msg", "Invalid value")
+            messages.append(f"{loc}: {msg}")
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "; ".join(messages) if messages else "Validation error",
+                }
+            },
+        )
+
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
         return JSONResponse(

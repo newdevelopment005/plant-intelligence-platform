@@ -24,7 +24,7 @@ export default function ForgotPassword() {
         }
       );
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ message: "If the email exists, a password reset link has been sent." }));
       setMessage(data.message || "If the email exists, a password reset link has been sent.");
     } catch (err) {
       setError("An error occurred. Please try again.");

@@ -31,10 +31,18 @@ async function proxyRequest(request: NextRequest, path: string) {
     signal: AbortSignal.timeout(60000),
   });
 
-  return new Response(response.body, {
+  const contentType = response.headers.get("content-type") || "application/json";
+  let responseBody: BodyInit | null = response.body;
+
+  if (!responseBody && response.status !== 204 && response.status !== 304) {
+    const text = await response.text();
+    responseBody = text || null;
+  }
+
+  return new Response(responseBody, {
     status: response.status,
     headers: {
-      "Content-Type": response.headers.get("content-type") || "application/json",
+      "Content-Type": contentType,
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "no-cache",
     },

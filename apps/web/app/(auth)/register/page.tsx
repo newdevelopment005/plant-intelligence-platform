@@ -57,10 +57,10 @@ export default function Register() {
         }
       );
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ error: { message: "Server error" } }));
 
       if (!response.ok) {
-        throw new Error(data.error?.message || "Registration failed");
+        throw new Error(data.error?.message || data.detail || "Registration failed");
       }
 
       router.push("/login?registered=true");

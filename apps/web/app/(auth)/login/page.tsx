@@ -30,10 +30,10 @@ export default function Login() {
         }
       );
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({ error: { message: "Server error" } }));
 
       if (!response.ok) {
-        throw new Error(data.error?.message || "Login failed");
+        throw new Error(data.error?.message || data.detail || "Login failed");
       }
 
       localStorage.setItem("access_token", data.access_token);
