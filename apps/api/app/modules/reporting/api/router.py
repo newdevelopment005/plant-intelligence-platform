@@ -26,11 +26,11 @@ from app.modules.reporting.domain.use_cases import (
     UpdateTemplateUseCase,
 )
 
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 
 # ────────────────────────── Reports ───────────────────────────────────
-@router.post("/", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
 async def create_report(
     request: CreateReportRequest,
     current_user=Depends(get_current_active_user),
@@ -52,7 +52,7 @@ async def create_report(
     )
 
 
-@router.get("/", response_model=PaginatedReportsResponse)
+@router.get("", response_model=PaginatedReportsResponse)
 async def list_reports(
     skip: int = 0,
     limit: int = 20,

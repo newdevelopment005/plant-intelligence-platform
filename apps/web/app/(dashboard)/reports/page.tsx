@@ -18,7 +18,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", report_type: "summary", format: "pdf" });
+  const [form, setForm] = useState({ name: "", report_type: "project_summary", format: "pdf" });
 
   useEffect(() => { loadReports(); }, []);
 
@@ -38,7 +38,7 @@ export default function ReportsPage() {
     try {
       await apiClient.createReport(form);
       setShowCreate(false);
-      setForm({ name: "", report_type: "summary", format: "pdf" });
+      setForm({ name: "", report_type: "project_summary", format: "pdf" });
       loadReports();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
@@ -96,11 +96,16 @@ export default function ReportsPage() {
               <div>
                 <label className="block text-sm font-medium">Type</label>
                 <select value={form.report_type} onChange={(e) => setForm({ ...form, report_type: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2">
-                  <option value="summary">Summary</option>
+                  <option value="project_summary">Project Summary</option>
                   <option value="phenotyping">Phenotyping</option>
-                  <option value="genomics">Genomics</option>
-                  <option value="literature">Literature</option>
-                  <option value="project">Project</option>
+                  <option value="genotyping">Genotyping</option>
+                  <option value="germplasm">Germplasm</option>
+                  <option value="experiment">Experiment</option>
+                  <option value="statistical">Statistical</option>
+                  <option value="comparative">Comparative</option>
+                  <option value="temporal">Temporal</option>
+                  <option value="geospatial">Geospatial</option>
+                  <option value="custom">Custom</option>
                 </select>
               </div>
               <div>

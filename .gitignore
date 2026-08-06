@@ -61,6 +61,9 @@ docker-compose.override.yml
 *.db
 *.sqlite3
 
+# File storage
+apps/api/storage/
+
 # Model cache
 models/
 .cache/
