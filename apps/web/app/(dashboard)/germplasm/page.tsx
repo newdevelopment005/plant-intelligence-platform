@@ -255,7 +255,7 @@ export default function GermplasmPage() {
                   {species.map((s) => (
                     <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50">
                       {editingId === s.id ? (
-                        <>
+                        <form onSubmit={handleUpdate} className="contents">
                           <td className="px-4 py-3">
                             <input type="text" value={editForm.common_name} onChange={(e) => setEditForm({ ...editForm, common_name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
                           </td>
@@ -273,11 +273,11 @@ export default function GermplasmPage() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
-                              <button onClick={handleUpdate} className="text-xs text-green-600 hover:underline">Save</button>
-                              <button onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                              <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
+                              <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
                             </div>
                           </td>
-                        </>
+                        </form>
                       ) : (
                         <>
                           <td className="px-4 py-3 text-sm font-medium">{s.common_name}</td>

@@ -42,6 +42,7 @@ dependencies = [
     "structlog>=24.4.0",
     "python-dotenv>=1.0.1",
     "orjson>=3.10.0",
+    "reportlab>=4.2.0",
 ]
 
 [project.optional-dependencies]

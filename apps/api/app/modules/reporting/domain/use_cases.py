@@ -1,11 +1,53 @@
+import os
+import uuid
 from datetime import UTC, datetime
 
+from app.config import settings
 from app.core.exceptions import NotFoundException, ValidationException
 from app.modules.reporting.domain.interfaces import (
     ReportRepositoryInterface,
     ReportTemplateRepositoryInterface,
 )
 from app.modules.reporting.domain.models import ReportModel, ReportTemplateModel
+
+
+def _generate_pdf_report(report: ReportModel) -> str:
+    """Generate a simple PDF report and return the file path."""
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.units import inch
+
+    report_dir = os.path.join(settings.STORAGE_LOCAL_PATH, "reports")
+    os.makedirs(report_dir, exist_ok=True)
+
+    filename = f"report_{uuid.uuid4().hex[:12]}.pdf"
+    filepath = os.path.join(report_dir, filename)
+
+    doc = SimpleDocTemplate(filepath, pagesize=letter, topMargin=0.5 * inch, bottomMargin=0.5 * inch)
+    styles = getSampleStyleSheet()
+    story = []
+
+    title_style = ParagraphStyle("CustomTitle", parent=styles["Title"], fontSize=18, spaceAfter=12)
+    story.append(Paragraph(report.name, title_style))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph(f"<b>Report Type:</b> {report.report_type}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Status:</b> Generated", styles["Normal"]))
+    story.append(Paragraph(f"<b>Generated:</b> {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}", styles["Normal"]))
+    if report.description:
+        story.append(Spacer(1, 12))
+        story.append(Paragraph(f"<b>Description:</b> {report.description}", styles["Normal"]))
+    if report.tags:
+        story.append(Spacer(1, 6))
+        story.append(Paragraph(f"<b>Tags:</b> {', '.join(report.tags)}", styles["Normal"]))
+
+    story.append(Spacer(1, 24))
+    story.append(Paragraph("This is a generated report from the Plant Intelligence Platform.", styles["Normal"]))
+
+    doc.build(story)
+
+    return f"/storage/reports/{filename}"
 
 
 class CreateReportUseCase:
@@ -56,7 +98,24 @@ class CreateReportUseCase:
             updated_at=datetime.now(UTC),
         )
 
-        return await self.report_repo.create(report)
+        report = await self.report_repo.create(report)
+
+        try:
+            if format == "pdf":
+                file_url = _generate_pdf_report(report)
+                report.file_url = file_url
+                report.status = "completed"
+            else:
+                report.status = "completed"
+            report.updated_at = datetime.now(UTC)
+            report = await self.report_repo.update(report)
+        except Exception as e:
+            report.status = "failed"
+            report.error_message = str(e)
+            report.updated_at = datetime.now(UTC)
+            await self.report_repo.update(report)
+
+        return report
 
 
 class GetReportUseCase:

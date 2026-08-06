@@ -379,10 +379,12 @@ export default function AccessionsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {editingId === a.id ? (
-                      <div className="flex gap-2">
-                        <button onClick={handleUpdate} className="text-xs text-green-600 hover:underline">Save</button>
-                        <button onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
-                      </div>
+                      <form onSubmit={handleUpdate} className="contents">
+                        <div className="flex gap-2">
+                          <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
+                          <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                        </div>
+                      </form>
                     ) : (
                       <div className="flex gap-2">
                         <button onClick={() => startEdit(a)} className="text-xs text-blue-600 hover:underline">Edit</button>

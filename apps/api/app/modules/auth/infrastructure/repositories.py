@@ -53,3 +53,12 @@ class UserRepository(UserRepositoryInterface):
     async def count_users(self) -> int:
         result = await self.db.execute(select(func.count(UserModel.id)))
         return result.scalar_one()
+
+    async def search_by_email_or_name(self, query: str, limit: int = 10) -> list[UserModel]:
+        search = f"%{query.lower().strip()}%"
+        result = await self.db.execute(
+            select(UserModel).where(
+                (UserModel.email.ilike(search)) | (UserModel.full_name.ilike(search))
+            ).limit(limit)
+        )
+        return list(result.scalars().all())

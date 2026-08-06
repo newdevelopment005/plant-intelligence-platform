@@ -28,6 +28,9 @@ export default function ImagesPage() {
   const [shareUserId, setShareUserId] = useState("");
   const [sharePermission, setSharePermission] = useState("read");
   const [sharing, setSharing] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", image_type: "" });
 
@@ -109,6 +112,8 @@ export default function ImagesPage() {
       setSuccess("Image shared successfully");
       setShareImageId(null);
       setShareUserId("");
+      setUserSearchQuery("");
+      setUserSearchResults([]);
       setShareVisibility("private");
       setSharePermission("read");
       setTimeout(() => setSuccess(""), 3000);
@@ -117,6 +122,29 @@ export default function ImagesPage() {
     } finally {
       setSharing(false);
     }
+  };
+
+  const handleUserSearch = async (query: string) => {
+    setUserSearchQuery(query);
+    if (query.length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+    setSearchingUsers(true);
+    try {
+      const data = await apiClient.searchUsers(query);
+      setUserSearchResults(data?.items ?? []);
+    } catch {
+      setUserSearchResults([]);
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  const getImageUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    return `/api/images${url}`;
   };
 
   return (
@@ -146,8 +174,8 @@ export default function ImagesPage() {
           {images.map((img) => (
             <div key={img.id} className="rounded-lg border overflow-hidden hover:shadow-md transition-shadow">
               <div className="aspect-square bg-muted flex items-center justify-center">
-                {img.thumbnail_url || img.file_url ? (
-                  <img src={img.thumbnail_url || img.file_url} alt={img.name} className="w-full h-full object-cover" />
+                {getImageUrl(img.thumbnail_url) || getImageUrl(img.file_url) ? (
+                  <img src={getImageUrl(img.thumbnail_url) || getImageUrl(img.file_url)!} alt={img.name} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-muted-foreground text-sm">No preview</span>
                 )}
@@ -189,20 +217,43 @@ export default function ImagesPage() {
                           <option value="link">Link</option>
                           <option value="public">Public</option>
                         </select>
-                        <input
-                          type="text"
-                          value={shareUserId}
-                          onChange={(e) => setShareUserId(e.target.value)}
-                          placeholder="User ID (optional)"
-                          className="w-full rounded border bg-background px-2 py-1 text-xs"
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={userSearchQuery}
+                            onChange={(e) => handleUserSearch(e.target.value)}
+                            placeholder="Search by email or name..."
+                            className="w-full rounded border bg-background px-2 py-1 text-xs"
+                          />
+                          {userSearchResults.length > 0 && (
+                            <div className="absolute z-10 mt-1 w-full rounded border bg-background shadow-lg max-h-32 overflow-y-auto">
+                              {userSearchResults.map((user) => (
+                                <button
+                                  key={user.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setShareUserId(user.id);
+                                    setUserSearchQuery(user.email);
+                                    setUserSearchResults([]);
+                                  }}
+                                  className="w-full px-2 py-1 text-left text-xs hover:bg-muted"
+                                >
+                                  {user.full_name} ({user.email})
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {shareUserId && (
+                          <div className="text-xs text-green-600">Selected: {userSearchQuery}</div>
+                        )}
                         <select value={sharePermission} onChange={(e) => setSharePermission(e.target.value)} className="w-full rounded border bg-background px-2 py-1 text-xs">
                           <option value="read">Read</option>
                           <option value="write">Write</option>
                         </select>
                         <div className="flex gap-1">
                           <button type="submit" disabled={sharing} className="text-xs text-green-600 hover:underline disabled:opacity-50">{sharing ? "Sharing..." : "Share"}</button>
-                          <button type="button" onClick={() => setShareImageId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                          <button type="button" onClick={() => { setShareImageId(null); setUserSearchQuery(""); setUserSearchResults([]); }} className="text-xs text-muted-foreground hover:underline">Cancel</button>
                         </div>
                       </form>
                     )}

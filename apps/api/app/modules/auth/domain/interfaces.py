@@ -33,3 +33,7 @@ class UserRepositoryInterface(ABC):
     @abstractmethod
     async def count_users(self) -> int:
         pass
+
+    @abstractmethod
+    async def search_by_email_or_name(self, query: str, limit: int = 10) -> list[UserModel]:
+        pass

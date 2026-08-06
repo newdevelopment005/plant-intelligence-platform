@@ -471,7 +471,7 @@ class ApiClient {
   // =============================================
   // Images (Update/Delete)
   // =============================================
-  async updateImage(id: string, data: { name?: string; image_type?: string }) {
+  async updateImage(id: string, data: { name?: string; image_type?: string; description?: string; species?: string; tissue_type?: string; growth_stage?: string; tags?: string[] }) {
     return this.request<any>(`/images/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -533,6 +533,28 @@ class ApiClient {
 
   async deleteMolecularExperiment(id: string) {
     return this.request<any>(`/molecular/experiments/${id}`, { method: "DELETE" });
+  }
+
+  async updatePrimer(experimentId: string, primerId: string, data: any) {
+    return this.request<any>(`/molecular/experiments/${experimentId}/primers/${primerId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePrimer(experimentId: string, primerId: string) {
+    return this.request<any>(`/molecular/experiments/${experimentId}/primers/${primerId}`, { method: "DELETE" });
+  }
+
+  async updateConstruct(experimentId: string, constructId: string, data: any) {
+    return this.request<any>(`/molecular/experiments/${experimentId}/constructs/${constructId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteConstruct(experimentId: string, constructId: string) {
+    return this.request<any>(`/molecular/experiments/${experimentId}/constructs/${constructId}`, { method: "DELETE" });
   }
 
   // =============================================
@@ -611,13 +633,12 @@ class ApiClient {
     });
   }
 
+  async deleteReport(id: string) {
+    return this.request<void>(`/reports/${id}`, { method: "DELETE" });
+  }
+
   async downloadReport(id: string) {
-    const token = localStorage.getItem("access_token");
-    const response = await fetch(`${this.baseUrl}/reports/${id}/download`, {
-      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    });
-    if (!response.ok) throw new Error("Download failed");
-    return response.blob();
+    return this.request<{ download_url: string; format: string; name: string }>(`/reports/${id}/download`);
   }
 
   async listReportTemplates() {
@@ -650,6 +671,15 @@ class ApiClient {
 
   async adminGetStats() {
     return this.request<any>("/admin/stats");
+  }
+
+  // =============================================
+  // User Search
+  // =============================================
+  async searchUsers(query: string) {
+    return this.request<{ items: { id: string; email: string; full_name: string; role: string }[] }>(
+      `/auth/users/search?q=${encodeURIComponent(query)}`
+    );
   }
 
   // =============================================

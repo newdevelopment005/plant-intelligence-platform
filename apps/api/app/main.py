@@ -1,11 +1,12 @@
 import json
+import os
 from contextlib import asynccontextmanager
 
 import httpx
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from app.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -117,6 +118,14 @@ def create_app() -> FastAPI:
     application.include_router(sharing_router, prefix="/api/v1/sharing", tags=["Sharing"])
     application.include_router(team_router, prefix="/api/v1/teams", tags=["Teams"])
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
+
+    @application.get("/storage/{file_path:path}")
+    async def serve_storage(file_path: str):
+        """Serve static files from the storage directory."""
+        full_path = os.path.join(settings.STORAGE_LOCAL_PATH, file_path)
+        if os.path.isfile(full_path):
+            return FileResponse(full_path)
+        return Response(status_code=404, content="File not found")
 
     @application.api_route("/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     @application.api_route("/api/v1/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])

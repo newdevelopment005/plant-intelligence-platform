@@ -1,6 +1,6 @@
 
 import structlog
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_active_user
@@ -235,3 +235,25 @@ async def change_password(
     )
 
     return result
+
+
+@router.get("/users/search")
+async def search_users(
+    q: str = Query(..., min_length=1, description="Search query (email or name)"),
+    limit: int = Query(10, ge=1, le=50),
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user_repo = _get_user_repo(db)
+    users = await user_repo.search_by_email_or_name(q, limit=limit)
+    return {
+        "items": [
+            {
+                "id": str(u.id),
+                "email": u.email,
+                "full_name": u.full_name,
+                "role": u.role,
+            }
+            for u in users
+        ]
+    }

@@ -47,15 +47,28 @@ export default function ReportsPage() {
 
   const handleDownload = async (id: string, name: string) => {
     try {
-      const blob = await apiClient.downloadReport(id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${name}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const data = await apiClient.request(`/reports/${id}/download`);
+      if (data.download_url) {
+        const downloadUrl = data.download_url.startsWith("http") ? data.download_url : `/api/images${data.download_url}`;
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `${name}.${data.format || "pdf"}`;
+        a.click();
+      } else {
+        setError("Report not ready for download");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Download failed");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this report?")) return;
+    try {
+      await apiClient.request(`/reports/${id}`, { method: "DELETE" });
+      loadReports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -131,9 +144,12 @@ export default function ReportsPage() {
                   <td className="px-4 py-3 text-sm uppercase">{r.format}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${r.status === "completed" ? "bg-green-100 text-green-800" : r.status === "generating" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{r.status}</span></td>
                   <td className="px-4 py-3">
-                    {r.status === "completed" && (
-                      <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-blue-600 hover:underline">Download</button>
-                    )}
+                    <div className="flex gap-2">
+                      {r.status === "completed" && (
+                        <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-blue-600 hover:underline">Download</button>
+                      )}
+                      <button onClick={() => handleDelete(r.id)} className="text-sm text-red-600 hover:underline">Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}
