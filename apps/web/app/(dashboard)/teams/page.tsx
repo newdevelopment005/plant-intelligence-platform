@@ -34,13 +34,15 @@ export default function TeamsPage() {
   const [addingMember, setAddingMember] = useState(false);
   const [success, setSuccess] = useState("");
   const [deleting, setDeleting] = useState(false);
-  const [shareEmail, setShareEmail] = useState("");
-  const [shareMessage, setShareMessage] = useState("");
-  const [sharing, setSharing] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [showInviteByEmail, setShowInviteByEmail] = useState(false);
+  const [inviteSearchQuery, setInviteSearchQuery] = useState("");
+  const [inviteSearchResults, setInviteSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
+  const [searchingInvite, setSearchingInvite] = useState(false);
+  const [inviteRole, setInviteRole] = useState("member");
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     loadTeams();
@@ -148,28 +150,6 @@ export default function TeamsPage() {
     }
   };
 
-  const handleShareTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!teamDetail) return;
-    setSharing(true);
-    setError("");
-    try {
-      await apiClient.shareItem({
-        item_type: "team",
-        item_id: teamDetail.id,
-        visibility: "link",
-        permission: "read",
-      });
-      setSuccess("Team link generated");
-      setShareMessage("");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to share");
-    } finally {
-      setSharing(false);
-    }
-  };
-
   const handleUserSearch = async (query: string) => {
     setUserSearchQuery(query);
     if (query.length < 2) {
@@ -184,6 +164,56 @@ export default function TeamsPage() {
       setUserSearchResults([]);
     } finally {
       setSearchingUsers(false);
+    }
+  };
+
+  const handleInviteByEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamDetail || !inviteSearchQuery.trim()) return;
+    setInviting(true);
+    setError("");
+    try {
+      const data = await apiClient.searchUsers(inviteSearchQuery.trim());
+      const users = data?.items ?? [];
+      if (users.length === 0) {
+        setError("No user found with that email. They may need to register first.");
+        setInviting(false);
+        return;
+      }
+      const user = users[0];
+      await apiClient.addTeamMember(teamDetail.id, {
+        user_id: user.id,
+        role: inviteRole,
+      });
+      setSuccess(`Added ${user.full_name || user.email} to the team`);
+      setInviteSearchQuery("");
+      setInviteSearchResults([]);
+      setInviteRole("member");
+      setShowInviteByEmail(false);
+      loadTeamDetail(teamDetail.id);
+      loadTeams();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to invite");
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleInviteSearch = async (query: string) => {
+    setInviteSearchQuery(query);
+    if (query.length < 2) {
+      setInviteSearchResults([]);
+      return;
+    }
+    setSearchingInvite(true);
+    try {
+      const data = await apiClient.searchUsers(query);
+      setInviteSearchResults(data?.items ?? []);
+    } catch {
+      setInviteSearchResults([]);
+    } finally {
+      setSearchingInvite(false);
     }
   };
 
@@ -303,25 +333,42 @@ export default function TeamsPage() {
                 </div>
 
                 {showInviteByEmail && (
-                  <form onSubmit={handleShareTeam} className="mb-4 rounded-md border bg-muted/50 p-4 space-y-3">
-                    <h3 className="text-sm font-medium">Invite via Email</h3>
-                    <input
-                      type="email"
-                      value={shareEmail}
-                      onChange={(e) => setShareEmail(e.target.value)}
-                      placeholder="colleague@university.edu"
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                    />
-                    <input
-                      type="text"
-                      value={shareMessage}
-                      onChange={(e) => setShareMessage(e.target.value)}
-                      placeholder="Message (optional)"
-                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                    />
+                  <form onSubmit={handleInviteByEmail} className="mb-4 rounded-md border bg-muted/50 p-4 space-y-3">
+                    <h3 className="text-sm font-medium">Invite Member by Email</h3>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={inviteSearchQuery}
+                        onChange={(e) => handleInviteSearch(e.target.value)}
+                        placeholder="Search by email or name..."
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      />
+                      {inviteSearchResults.length > 0 && (
+                        <div className="absolute z-10 mt-1 w-full rounded-md border bg-background shadow-lg max-h-40 overflow-y-auto">
+                          {inviteSearchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => {
+                                setInviteSearchQuery(user.email);
+                                setInviteSearchResults([]);
+                              }}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                            >
+                              {user.full_name} ({user.email})
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
                     <div className="flex gap-2">
-                      <button type="submit" disabled={sharing || !shareEmail} className="text-sm text-green-600 hover:underline disabled:opacity-50">{sharing ? "Sending..." : "Send Invite"}</button>
-                      <button type="button" onClick={() => setShowInviteByEmail(false)} className="text-sm text-muted-foreground hover:underline">Cancel</button>
+                      <button type="submit" disabled={inviting || !inviteSearchQuery.trim()} className="text-sm text-green-600 hover:underline disabled:opacity-50">{inviting ? "Adding..." : "Add to Team"}</button>
+                      <button type="button" onClick={() => { setShowInviteByEmail(false); setInviteSearchQuery(""); setInviteSearchResults([]); }} className="text-sm text-muted-foreground hover:underline">Cancel</button>
                     </div>
                   </form>
                 )}

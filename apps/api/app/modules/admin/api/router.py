@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_active_user
 from app.database import get_db
-from app.modules.auth.domain.models import User
+from app.modules.auth.domain.models import UserModel
 
 router = APIRouter()
 
@@ -14,10 +14,10 @@ async def list_users(
     current_user: dict = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    result = await db.execute(select(UserModel).order_by(UserModel.created_at.desc()))
     users = result.scalars().all()
 
-    count_result = await db.execute(select(func.count()).select_from(User))
+    count_result = await db.execute(select(func.count()).select_from(UserModel))
     total = count_result.scalar() or 0
 
     return {
@@ -43,7 +43,7 @@ async def update_user_role(
     current_user: dict = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         return {"message": "User not found"}
@@ -60,7 +60,7 @@ async def update_user_status(
     current_user: dict = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         return {"message": "User not found"}
@@ -95,7 +95,7 @@ async def usage_stats(
     from app.modules.lims.domain.models import SampleModel
     from app.modules.phenotyping.domain.models import ExperimentModel
 
-    user_count = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
+    user_count = (await db.execute(select(func.count()).select_from(UserModel))).scalar() or 0
     sample_count = (await db.execute(select(func.count()).select_from(SampleModel))).scalar() or 0
     exp_count = (await db.execute(select(func.count()).select_from(ExperimentModel))).scalar() or 0
 
