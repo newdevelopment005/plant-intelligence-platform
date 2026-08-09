@@ -535,6 +535,38 @@ class ApiClient {
     return this.request<any>(`/molecular/experiments/${id}`, { method: "DELETE" });
   }
 
+  // =============================================
+  // Phenotyping (Delete)
+  // =============================================
+  async deleteExperiment(id: string) {
+    return this.request<any>(`/phenotyping/experiments/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Genomics (Delete)
+  // =============================================
+  async deleteSequence(id: string) {
+    return this.request<any>(`/genomics/sequences/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // Notebook (Delete)
+  // =============================================
+  async deleteNotebookEntry(id: string) {
+    return this.request<any>(`/notebook/entries/${id}`, { method: "DELETE" });
+  }
+
+  // =============================================
+  // LIMS (Delete Sample)
+  // =============================================
+  async deleteSample(id: string) {
+    return this.request<any>(`/lims/samples/${id}`, { method: "DELETE" });
+  }
+
+  async deleteEquipment(id: string) {
+    return this.request<any>(`/lims/equipment/${id}`, { method: "DELETE" });
+  }
+
   async updatePrimer(experimentId: string, primerId: string, data: any) {
     return this.request<any>(`/molecular/experiments/${experimentId}/primers/${primerId}`, {
       method: "PUT",

@@ -131,6 +131,27 @@ async def get_sample(
     }
 
 
+@router.delete("/samples/{sample_id}")
+async def delete_sample(
+    sample_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SampleModel).where(
+            SampleModel.id == sample_id,
+            SampleModel.created_by == current_user["id"],
+        )
+    )
+    sample = result.scalar_one_or_none()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    await db.delete(sample)
+    await db.commit()
+    return {"message": "Sample deleted"}
+
+
 @router.post("/samples/transfer")
 async def transfer_sample(
     body: TransferSampleRequest,

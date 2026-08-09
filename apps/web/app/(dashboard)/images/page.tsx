@@ -33,6 +33,7 @@ export default function ImagesPage() {
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", image_type: "" });
+  const [viewImage, setViewImage] = useState<PlantImage | null>(null);
 
   useEffect(() => { loadImages(); }, []);
 
@@ -165,6 +166,28 @@ export default function ImagesPage() {
       {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-md bg-green-50 p-4 text-sm text-green-700">{success}</div>}
 
+      {viewImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setViewImage(null)}>
+          <div className="max-w-4xl max-h-[90vh] relative" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={getImageUrl(viewImage.file_url) || ""}
+              alt={viewImage.name}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg"
+            />
+            <div className="mt-4 text-white text-center">
+              <h3 className="text-lg font-semibold">{viewImage.name}</h3>
+              <p className="text-sm text-gray-300">{viewImage.image_type} {viewImage.species && `- ${viewImage.species}`}</p>
+            </div>
+            <button
+              onClick={() => setViewImage(null)}
+              className="absolute top-2 right-2 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
       ) : images.length === 0 ? (
@@ -173,9 +196,31 @@ export default function ImagesPage() {
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {images.map((img) => (
             <div key={img.id} className="rounded-lg border overflow-hidden hover:shadow-md transition-shadow">
-              <div className="aspect-square bg-muted flex items-center justify-center">
+              <div
+                className="aspect-square bg-muted flex items-center justify-center cursor-pointer"
+                onClick={() => {
+                  if (getImageUrl(img.file_url)) {
+                    setViewImage(img);
+                  }
+                }}
+              >
                 {getImageUrl(img.thumbnail_url) || getImageUrl(img.file_url) ? (
-                  <img src={getImageUrl(img.thumbnail_url) || getImageUrl(img.file_url)!} alt={img.name} className="w-full h-full object-cover" />
+                  <img
+                    src={getImageUrl(img.thumbnail_url) || getImageUrl(img.file_url)!}
+                    alt={img.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const span = document.createElement("span");
+                        span.className = "text-muted-foreground text-sm";
+                        span.textContent = "Image";
+                        parent.appendChild(span);
+                      }
+                    }}
+                  />
                 ) : (
                   <span className="text-muted-foreground text-sm">No preview</span>
                 )}

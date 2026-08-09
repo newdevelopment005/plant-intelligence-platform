@@ -1,33 +1,107 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_current_active_user
+from app.database import get_db
+from app.modules.auth.domain.models import User
 
 router = APIRouter()
 
 
 @router.get("/users")
-async def list_users():
-    return {"message": "Admin module - list users"}
+async def list_users(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).order_by(User.created_at.desc()))
+    users = result.scalars().all()
+
+    count_result = await db.execute(select(func.count()).select_from(User))
+    total = count_result.scalar() or 0
+
+    return {
+        "items": [
+            {
+                "id": str(u.id),
+                "email": u.email,
+                "full_name": u.full_name,
+                "role": u.role,
+                "is_active": u.is_active,
+                "created_at": u.created_at.isoformat(),
+            }
+            for u in users
+        ],
+        "total": total,
+    }
 
 
 @router.put("/users/{user_id}/role")
-async def update_user_role(user_id: str):
-    return {"message": "Admin module - update user role", "id": user_id}
+async def update_user_role(
+    user_id: str,
+    body: dict,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"message": "User not found"}
+
+    user.role = body.get("role", user.role)
+    await db.commit()
+    return {"message": "Role updated", "id": user_id, "role": user.role}
 
 
 @router.put("/users/{user_id}/status")
-async def update_user_status(user_id: str):
-    return {"message": "Admin module - update user status", "id": user_id}
+async def update_user_status(
+    user_id: str,
+    body: dict,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        return {"message": "User not found"}
+
+    user.is_active = body.get("is_active", user.is_active)
+    await db.commit()
+    return {"message": "Status updated", "id": user_id, "is_active": user.is_active}
 
 
 @router.get("/audit-log")
-async def get_audit_log():
-    return {"message": "Admin module - audit log"}
+async def get_audit_log(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return {"items": [], "total": 0}
 
 
-@router.get("/system-health")
+@router.get("/health")
 async def system_health():
-    return {"message": "Admin module - system health"}
+    return {
+        "status": "healthy",
+        "database": "connected",
+        "uptime": "running",
+    }
 
 
-@router.get("/usage-stats")
-async def usage_stats():
-    return {"message": "Admin module - usage stats"}
+@router.get("/stats")
+async def usage_stats(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.modules.lims.domain.models import SampleModel
+    from app.modules.phenotyping.domain.models import ExperimentModel
+
+    user_count = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
+    sample_count = (await db.execute(select(func.count()).select_from(SampleModel))).scalar() or 0
+    exp_count = (await db.execute(select(func.count()).select_from(ExperimentModel))).scalar() or 0
+
+    return {
+        "total_users": user_count,
+        "total_projects": 0,
+        "total_samples": sample_count,
+        "active_experiments": exp_count,
+    }

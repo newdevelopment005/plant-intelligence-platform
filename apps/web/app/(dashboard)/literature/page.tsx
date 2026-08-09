@@ -43,14 +43,17 @@ export default function LiteraturePage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.createPaper({
+      const payload: any = {
         title: form.title,
         authors: form.authors ? form.authors.split(",").map((a) => a.trim()) : undefined,
         journal: form.journal || undefined,
         doi: form.doi || undefined,
-        year: form.year ? parseInt(form.year) : undefined,
         abstract: form.abstract || undefined,
-      });
+      };
+      if (form.year) {
+        payload.publication_date = `${form.year}-01-01`;
+      }
+      await apiClient.createPaper(payload);
       setShowCreate(false);
       setForm({ title: "", authors: "", journal: "", doi: "", year: "", abstract: "" });
       loadPapers();
@@ -75,14 +78,17 @@ export default function LiteraturePage() {
     e.preventDefault();
     if (!editingId) return;
     try {
-      await apiClient.updatePaper(editingId, {
+      const payload: any = {
         title: editForm.title,
         authors: editForm.authors ? editForm.authors.split(",").map((a) => a.trim()) : undefined,
         journal: editForm.journal || undefined,
         doi: editForm.doi || undefined,
-        year: editForm.year ? parseInt(editForm.year) : undefined,
         abstract: editForm.abstract || undefined,
-      });
+      };
+      if (editForm.year) {
+        payload.publication_date = `${editForm.year}-01-01`;
+      }
+      await apiClient.updatePaper(editingId, payload);
       setEditingId(null);
       loadPapers();
     } catch (err) {

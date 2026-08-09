@@ -101,9 +101,17 @@ export default function MolecularPage() {
                 <select value={form.experiment_type} onChange={(e) => setForm({ ...form, experiment_type: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2">
                   <option value="PCR">PCR</option>
                   <option value="qPCR">qPCR</option>
-                  <option value="cloning">Cloning</option>
-                  <option value="sequencing">Sequencing</option>
-                  <option value="gene_expression">Gene Expression</option>
+                  <option value="RT-PCR">RT-PCR</option>
+                  <option value="RNA-Seq">RNA-Seq</option>
+                  <option value="DNA_Extraction">DNA Extraction</option>
+                  <option value="RNA_Extraction">RNA Extraction</option>
+                  <option value="ChIP-Seq">ChIP-Seq</option>
+                  <option value="ATAC-Seq">ATAC-Seq</option>
+                  <option value="Proteomics">Proteomics</option>
+                  <option value="Metabolomics">Metabolomics</option>
+                  <option value="CRISPR">CRISPR</option>
+                  <option value="Transformation">Transformation</option>
+                  <option value="Cloning">Cloning</option>
                 </select>
               </div>
               <div>
@@ -133,9 +141,17 @@ export default function MolecularPage() {
                   <select value={editForm.experiment_type} onChange={(e) => setEditForm({ ...editForm, experiment_type: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm">
                     <option value="PCR">PCR</option>
                     <option value="qPCR">qPCR</option>
-                    <option value="cloning">Cloning</option>
-                    <option value="sequencing">Sequencing</option>
-                    <option value="gene_expression">Gene Expression</option>
+                    <option value="RT-PCR">RT-PCR</option>
+                    <option value="RNA-Seq">RNA-Seq</option>
+                    <option value="DNA_Extraction">DNA Extraction</option>
+                    <option value="RNA_Extraction">RNA Extraction</option>
+                    <option value="ChIP-Seq">ChIP-Seq</option>
+                    <option value="ATAC-Seq">ATAC-Seq</option>
+                    <option value="Proteomics">Proteomics</option>
+                    <option value="Metabolomics">Metabolomics</option>
+                    <option value="CRISPR">CRISPR</option>
+                    <option value="Transformation">Transformation</option>
+                    <option value="Cloning">Cloning</option>
                   </select>
                   <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" rows={2} placeholder="Description" />
                   <div className="flex gap-2">

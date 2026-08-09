@@ -50,6 +50,16 @@ export default function GenomicsPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this sequence?")) return;
+    try {
+      await apiClient.deleteSequence(id);
+      loadSequences();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -120,6 +130,9 @@ export default function GenomicsPage() {
               {seq.organism && <p className="text-xs text-muted-foreground mt-1">{seq.organism}</p>}
               {seq.chromosome && <p className="text-xs text-muted-foreground">Chr: {seq.chromosome}</p>}
               {seq.length && <p className="text-xs text-muted-foreground">Length: {seq.length.toLocaleString()} bp</p>}
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => handleDelete(seq.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+              </div>
             </div>
           ))}
         </div>

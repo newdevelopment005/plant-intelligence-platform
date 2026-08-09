@@ -32,6 +32,7 @@ export default function LimsPage() {
   const [tab, setTab] = useState<"samples" | "equipment">("samples");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ sample_code: "", sample_type: "DNA", name: "", location: "" });
+  const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -59,6 +60,17 @@ export default function LimsPage() {
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const handleDeleteSample = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this sample?")) return;
+    try {
+      await apiClient.deleteSample(id);
+      setSelectedSample(null);
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -118,6 +130,26 @@ export default function LimsPage() {
         </div>
       )}
 
+      {selectedSample && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Sample Details</h2>
+            <div className="space-y-3">
+              <div><span className="font-medium">Code:</span> {selectedSample.sample_code}</div>
+              <div><span className="font-medium">Name:</span> {selectedSample.name}</div>
+              <div><span className="font-medium">Type:</span> {selectedSample.sample_type}</div>
+              <div><span className="font-medium">Status:</span> {selectedSample.status}</div>
+              <div><span className="font-medium">Location:</span> {selectedSample.location || "-"}</div>
+              <div><span className="font-medium">Created:</span> {new Date(selectedSample.created_at).toLocaleString()}</div>
+            </div>
+            <div className="flex gap-2 justify-end mt-6">
+              <button onClick={() => setSelectedSample(null)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Close</button>
+              <button onClick={() => handleDeleteSample(selectedSample.id)} className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" /></div>
       ) : tab === "samples" ? (
@@ -133,16 +165,20 @@ export default function LimsPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Location</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {samples.map((s) => (
-                  <tr key={s.id} className="border-t hover:bg-muted/20">
+                  <tr key={s.id} className="border-t hover:bg-muted/20 cursor-pointer" onClick={() => setSelectedSample(s)}>
                     <td className="px-4 py-3 text-sm font-mono">{s.sample_code}</td>
                     <td className="px-4 py-3 text-sm">{s.name}</td>
                     <td className="px-4 py-3 text-sm">{s.sample_type}</td>
                     <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${s.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{s.status}</span></td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{s.location || "-"}</td>
+                    <td className="px-4 py-3">
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteSample(s.id); }} className="text-xs text-red-600 hover:underline">Delete</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -21,13 +21,21 @@ interface AuditEntry {
   created_at: string;
 }
 
+interface SystemHealth {
+  status: string;
+  database: string;
+  uptime: string;
+}
+
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"users" | "audit">("users");
+  const [tab, setTab] = useState<"users" | "audit" | "system">("users");
+  const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -46,12 +54,38 @@ export default function AdminPage() {
     } finally { setLoading(false); }
   };
 
+  const loadSystemHealth = async () => {
+    try {
+      const health = await apiClient.adminGetHealth();
+      setSystemHealth(health);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load health");
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const s = await apiClient.adminGetStats();
+      setStats(s);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load stats");
+    }
+  };
+
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
       await apiClient.adminUpdateUserRole(userId, newRole);
       setUsers(users.map((u) => u.id === userId ? { ...u, role: newRole } : u));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update role");
+    }
+  };
+
+  const handleTabChange = (newTab: "users" | "audit" | "system") => {
+    setTab(newTab);
+    if (newTab === "system") {
+      loadSystemHealth();
+      loadStats();
     }
   };
 
@@ -63,8 +97,9 @@ export default function AdminPage() {
       </div>
 
       <div className="flex gap-4 border-b">
-        <button onClick={() => setTab("users")} className={`pb-2 px-4 text-sm font-medium ${tab === "users" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Users</button>
-        <button onClick={() => setTab("audit")} className={`pb-2 px-4 text-sm font-medium ${tab === "audit" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Audit Log</button>
+        <button onClick={() => handleTabChange("users")} className={`pb-2 px-4 text-sm font-medium ${tab === "users" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Users</button>
+        <button onClick={() => handleTabChange("audit")} className={`pb-2 px-4 text-sm font-medium ${tab === "audit" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Audit Log</button>
+        <button onClick={() => handleTabChange("system")} className={`pb-2 px-4 text-sm font-medium ${tab === "system" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>System</button>
       </div>
 
       {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
@@ -80,6 +115,7 @@ export default function AdminPage() {
                 <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Role</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
               </tr>
             </thead>
@@ -105,12 +141,20 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
+                  <td className="px-4 py-3 text-sm">
+                    <button
+                      onClick={() => handleRoleChange(user.id, user.role)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Update
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : tab === "audit" ? (
         <div className="rounded-lg border overflow-hidden">
           <table className="w-full">
             <thead className="bg-muted/50">
@@ -130,8 +174,71 @@ export default function AdminPage() {
                   <td className="px-4 py-3 text-sm text-muted-foreground">{new Date(entry.created_at).toLocaleString()}</td>
                 </tr>
               ))}
+              {auditLog.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No audit log entries</td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="text-lg font-semibold mb-4">System Health</h2>
+            {systemHealth ? (
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Status</div>
+                  <div className="text-lg font-semibold">{systemHealth.status || "Unknown"}</div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Database</div>
+                  <div className="text-lg font-semibold">{systemHealth.database || "Unknown"}</div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Uptime</div>
+                  <div className="text-lg font-semibold">{systemHealth.uptime || "Unknown"}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-muted-foreground">Loading system health...</div>
+            )}
+          </div>
+
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="text-lg font-semibold mb-4">Usage Statistics</h2>
+            {stats ? (
+              <div className="grid grid-cols-4 gap-4">
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Total Users</div>
+                  <div className="text-lg font-semibold">{stats.total_users ?? total}</div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Total Projects</div>
+                  <div className="text-lg font-semibold">{stats.total_projects ?? "-"}</div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Total Samples</div>
+                  <div className="text-lg font-semibold">{stats.total_samples ?? "-"}</div>
+                </div>
+                <div className="rounded-md bg-muted/50 p-4">
+                  <div className="text-sm text-muted-foreground">Active Experiments</div>
+                  <div className="text-lg font-semibold">{stats.active_experiments ?? "-"}</div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-muted-foreground">Loading statistics...</div>
+            )}
+          </div>
+
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+            <div className="flex gap-3">
+              <button onClick={() => { loadSystemHealth(); loadStats(); }} className="rounded-md border px-4 py-2 hover:bg-gray-50">Refresh</button>
+              <button onClick={loadData} className="rounded-md border px-4 py-2 hover:bg-gray-50">Reload Users</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

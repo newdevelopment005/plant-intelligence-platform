@@ -198,6 +198,27 @@ async def unlock_entry(
     return {"message": "Entry unlocked"}
 
 
+@router.delete("/entries/{entry_id}")
+async def delete_entry(
+    entry_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(NotebookEntryModel).where(
+            NotebookEntryModel.id == entry_id,
+            NotebookEntryModel.created_by == current_user["id"],
+        )
+    )
+    entry = result.scalar_one_or_none()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
+    await db.delete(entry)
+    await db.commit()
+    return {"message": "Entry deleted"}
+
+
 @router.get("/entries/{entry_id}/versions")
 async def list_versions(
     entry_id: str,

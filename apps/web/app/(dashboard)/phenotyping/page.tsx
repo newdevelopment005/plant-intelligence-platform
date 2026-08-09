@@ -51,6 +51,16 @@ export default function PhenotypingPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this experiment?")) return;
+    try {
+      await apiClient.deleteExperiment(id);
+      loadExperiments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -120,6 +130,9 @@ export default function PhenotypingPage() {
               <p className="text-sm text-muted-foreground mb-1">{exp.experiment_type}</p>
               {exp.location && <p className="text-xs text-muted-foreground">{exp.location}</p>}
               {exp.description && <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{exp.description}</p>}
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => handleDelete(exp.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+              </div>
             </div>
           ))}
         </div>

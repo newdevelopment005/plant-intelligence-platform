@@ -21,6 +21,16 @@ export default function SharedPage() {
   const [loadingMine, setLoadingMine] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showShareForm, setShowShareForm] = useState(false);
+  const [shareItemType, setShareItemType] = useState("image");
+  const [shareItemId, setShareItemId] = useState("");
+  const [shareVisibility, setShareVisibility] = useState("private");
+  const [sharePermission, setSharePermission] = useState("read");
+  const [shareUserId, setShareUserId] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     loadSharedWithMe();
@@ -64,6 +74,54 @@ export default function SharedPage() {
     }
   };
 
+  const handleShare = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shareItemId.trim()) return;
+    setSharing(true);
+    setError("");
+    try {
+      const payload: any = {
+        item_type: shareItemType,
+        item_id: shareItemId.trim(),
+        visibility: shareVisibility,
+        permission: sharePermission,
+      };
+      if (shareUserId.trim()) {
+        payload.user_ids = [shareUserId.trim()];
+      }
+      await apiClient.shareItem(payload);
+      setSuccess("Item shared successfully");
+      setShowShareForm(false);
+      setShareItemId("");
+      setShareUserId("");
+      setUserSearchQuery("");
+      setUserSearchResults([]);
+      loadMyShares();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to share");
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleUserSearch = async (query: string) => {
+    setUserSearchQuery(query);
+    if (query.length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+    setSearchingUsers(true);
+    try {
+      const data = await apiClient.searchUsers(query);
+      setUserSearchResults(data?.items ?? []);
+    } catch {
+      setUserSearchResults([]);
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
   const renderSharedItem = (item: SharedItem, showRevoke = false) => (
     <div key={item.id} className="rounded-lg border bg-card p-4 flex items-center justify-between">
       <div className="space-y-1">
@@ -102,13 +160,110 @@ export default function SharedPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Shared</h1>
-        <p className="text-muted-foreground">Items shared with you and by you</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Shared</h1>
+          <p className="text-muted-foreground">Items shared with you and by you</p>
+        </div>
+        <button
+          onClick={() => setShowShareForm(!showShareForm)}
+          className="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+        >
+          {showShareForm ? "Cancel" : "Share Item"}
+        </button>
       </div>
 
       {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
       {success && <div className="rounded-md bg-green-50 p-4 text-sm text-green-700">{success}</div>}
+
+      {showShareForm && (
+        <div className="rounded-lg border bg-card p-6">
+          <h2 className="text-lg font-semibold mb-4">Share an Item</h2>
+          <form onSubmit={handleShare} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Item Type</label>
+                <select value={shareItemType} onChange={(e) => setShareItemType(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <option value="image">Image</option>
+                  <option value="report">Report</option>
+                  <option value="notebook_entry">Notebook Entry</option>
+                  <option value="paper">Paper</option>
+                  <option value="project">Project</option>
+                  <option value="sample">Sample</option>
+                  <option value="team">Team</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Item ID *</label>
+                <input
+                  type="text"
+                  value={shareItemId}
+                  onChange={(e) => setShareItemId(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  placeholder="Enter item ID"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Visibility</label>
+                <select value={shareVisibility} onChange={(e) => setShareVisibility(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <option value="private">Private</option>
+                  <option value="link">Link</option>
+                  <option value="public">Public</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Permission</label>
+                <select value={sharePermission} onChange={(e) => setSharePermission(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <option value="read">Read</option>
+                  <option value="write">Write</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Share with User (optional)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={userSearchQuery}
+                  onChange={(e) => handleUserSearch(e.target.value)}
+                  placeholder="Search by email or name..."
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                />
+                {userSearchResults.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-background shadow-lg max-h-40 overflow-y-auto">
+                    {userSearchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        onClick={() => {
+                          setShareUserId(user.id);
+                          setUserSearchQuery(user.full_name + " (" + user.email + ")");
+                          setUserSearchResults([]);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                      >
+                        {user.full_name} ({user.email})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {shareUserId && (
+                <div className="text-xs text-green-600 mt-1">Selected user ID: {shareUserId}</div>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setShowShareForm(false)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Cancel</button>
+              <button type="submit" disabled={sharing || !shareItemId.trim()} className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50">
+                {sharing ? "Sharing..." : "Share"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div>
         <h2 className="text-xl font-semibold mb-4">Shared With Me</h2>

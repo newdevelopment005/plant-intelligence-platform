@@ -20,6 +20,7 @@ export default function NotebookPage() {
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", entry_type: "note", tags: "" });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => { loadEntries(); }, []);
 
@@ -48,6 +49,16 @@ export default function NotebookPage() {
       loadEntries();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this entry?")) return;
+    try {
+      await apiClient.deleteNotebookEntry(id);
+      loadEntries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
 
@@ -106,7 +117,7 @@ export default function NotebookPage() {
       ) : (
         <div className="space-y-4">
           {entries.map((entry) => (
-            <div key={entry.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow">
+            <div key={entry.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-semibold text-lg">{entry.title}</h3>
                 <div className="flex items-center gap-2">
@@ -114,7 +125,11 @@ export default function NotebookPage() {
                   {entry.is_locked && <span className="text-xs text-muted-foreground">Locked</span>}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-3 font-mono">{entry.content}</p>
+              {expandedId === entry.id ? (
+                <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap mt-2">{entry.content}</pre>
+              ) : (
+                <p className="text-sm text-muted-foreground line-clamp-3 font-mono">{entry.content}</p>
+              )}
               {entry.tags && entry.tags.length > 0 && (
                 <div className="flex gap-1 mt-3 flex-wrap">
                   {entry.tags.map((tag) => (
@@ -122,6 +137,9 @@ export default function NotebookPage() {
                   ))}
                 </div>
               )}
+              <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+              </div>
             </div>
           ))}
         </div>
