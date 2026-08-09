@@ -51,8 +51,13 @@ export default function DashboardPage() {
       const results: Record<string, number> = {};
       for (const key of keys) {
         try {
-          const endpoint = key === "germplasm" ? "/germplasm/accessions" : `/${key}`;
-          const data = await apiClient.request<{ total?: number; items?: any[] }>(endpoint);
+          const endpoints: Record<string, string> = {
+            projects: "/projects",
+            germplasm: "/germplasm/accessions",
+            experiments: "/phenotyping/experiments",
+            papers: "/literature/papers",
+          };
+          const data = await apiClient.request<{ total?: number; items?: any[] }>(endpoints[key]);
           results[key] = data?.total ?? data?.items?.length ?? 0;
         } catch {
           results[key] = 0;
