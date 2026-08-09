@@ -10,7 +10,7 @@ export async function GET(
   const filePath = path.join("/");
 
   try {
-    const backendResponse = await fetch(`${BACKEND_URL}/storage/${filePath}`, {
+    const backendResponse = await fetch(`${BACKEND_URL}/${filePath}`, {
       headers: { "ngrok-skip-browser-warning": "true" },
     });
 

@@ -15,8 +15,7 @@ def get_upload_path(module: str, filename: str) -> Path:
 
 
 def get_file_url(module: str, filename: str) -> str:
-    path = get_upload_path(module, filename)
-    return f"/storage/{module}/{path.name}"
+    return f"/storage/{module}/{filename}"
 
 
 async def save_uploaded_file(file: UploadFile, module: str) -> str:

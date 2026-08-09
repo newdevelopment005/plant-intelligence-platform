@@ -640,11 +640,11 @@ class ApiClient {
   }
 
   async listAnalysisJobs(imageId: string) {
-    return this.request<{ items: any[]; total: number }>(`/images/${imageId}/analysis`);
+    return this.request<{ items: any[]; total: number }>(`/images/${imageId}/analyze`);
   }
 
   async createAnalysisJob(imageId: string, data: { analysis_type: string; parameters?: any }) {
-    return this.request<any>(`/images/${imageId}/analysis`, {
+    return this.request<any>(`/images/${imageId}/analyze`, {
       method: "POST",
       body: JSON.stringify(data),
     });

@@ -37,6 +37,7 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"overview" | "members" | "settings">("overview");
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     loadProject();
@@ -63,6 +64,22 @@ export default function ProjectDetailPage() {
       router.push("/projects");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete project");
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!project) return;
+    setUpdating(true);
+    try {
+      await apiClient.request(`/projects/${projectId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setProject({ ...project, status: newStatus });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update status");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -261,16 +278,21 @@ export default function ProjectDetailPage() {
           <div className="rounded-lg border p-4 space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Status</label>
-              <select className="w-full rounded-md border px-3 py-2">
-                <option value="active" selected={project.status === "active"}>
-                  Active
-                </option>
-                <option value="archived" selected={project.status === "archived"}>
-                  Archived
-                </option>
+              <select
+                className="w-full rounded-md border px-3 py-2"
+                value={project.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                disabled={updating}
+              >
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
               </select>
+              {updating && <p className="text-xs text-muted-foreground mt-1">Updating...</p>}
             </div>
-            <button className="w-full rounded-md border border-red-300 px-4 py-2 text-red-600 hover:bg-red-50">
+            <button
+              onClick={handleDelete}
+              className="w-full rounded-md border border-red-300 px-4 py-2 text-red-600 hover:bg-red-50"
+            >
               Delete Project
             </button>
           </div>
