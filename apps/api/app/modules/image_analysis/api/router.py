@@ -193,6 +193,7 @@ async def update_image(
         user_id=current_user["id"],
         name=request.name,
         description=request.description,
+        image_type=request.image_type,
         species=request.species,
         tissue_type=request.tissue_type,
         growth_stage=request.growth_stage,

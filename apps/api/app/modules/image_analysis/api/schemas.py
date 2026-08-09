@@ -27,6 +27,7 @@ class UploadImageRequest(BaseModel):
 class UpdateImageRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = Field(None, max_length=5000)
+    image_type: str | None = Field(None, max_length=50)
     species: str | None = Field(None, max_length=255)
     tissue_type: str | None = Field(None, max_length=100)
     growth_stage: str | None = Field(None, max_length=100)

@@ -162,6 +162,7 @@ class UpdateImageUseCase:
         user_id: str,
         name: str | None = None,
         description: str | None = None,
+        image_type: str | None = None,
         species: str | None = None,
         tissue_type: str | None = None,
         growth_stage: str | None = None,
@@ -180,6 +181,8 @@ class UpdateImageUseCase:
             image.name = name.strip()
         if description is not None:
             image.description = description.strip() if description else None
+        if image_type is not None:
+            image.image_type = image_type.strip()
         if species is not None:
             image.species = species.strip() if species else None
         if tissue_type is not None:
