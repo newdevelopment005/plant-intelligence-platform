@@ -19,6 +19,8 @@ export default function ReportsPage() {
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", report_type: "project_summary", format: "pdf" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", report_type: "project_summary", format: "pdf" });
 
   useEffect(() => { loadReports(); }, []);
 
@@ -42,6 +44,23 @@ export default function ReportsPage() {
       loadReports();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const startEdit = (r: Report) => {
+    setEditingId(r.id);
+    setEditForm({ name: r.name, report_type: r.report_type, format: r.format });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateReport(editingId, editForm);
+      setEditingId(null);
+      loadReports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
     }
   };
 
@@ -144,18 +163,44 @@ export default function ReportsPage() {
             <tbody>
               {reports.map((r) => (
                 <tr key={r.id} className="border-t hover:bg-muted/20">
-                  <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
-                  <td className="px-4 py-3 text-sm">{r.report_type}</td>
-                  <td className="px-4 py-3 text-sm uppercase">{r.format}</td>
-                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${r.status === "completed" ? "bg-green-100 text-green-800" : r.status === "generating" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{r.status}</span></td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      {r.status === "completed" && (
-                        <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-blue-600 hover:underline">Download</button>
-                      )}
-                      <button onClick={() => handleDelete(r.id)} className="text-sm text-red-600 hover:underline">Delete</button>
-                    </div>
-                  </td>
+                  {editingId === r.id ? (
+                    <td colSpan={5} className="px-4 py-3">
+                      <form onSubmit={handleUpdate} className="flex items-center gap-3">
+                        <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="flex-1 rounded border px-2 py-1 text-sm" placeholder="Name" />
+                        <select value={editForm.report_type} onChange={(e) => setEditForm({ ...editForm, report_type: e.target.value })} className="rounded border px-2 py-1 text-sm">
+                          <option value="project_summary">Project Summary</option>
+                          <option value="phenotyping">Phenotyping</option>
+                          <option value="genotyping">Genotyping</option>
+                          <option value="germplasm">Germplasm</option>
+                          <option value="experiment">Experiment</option>
+                          <option value="statistical">Statistical</option>
+                        </select>
+                        <select value={editForm.format} onChange={(e) => setEditForm({ ...editForm, format: e.target.value })} className="rounded border px-2 py-1 text-sm">
+                          <option value="pdf">PDF</option>
+                          <option value="csv">CSV</option>
+                          <option value="json">JSON</option>
+                        </select>
+                        <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
+                        <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                      </form>
+                    </td>
+                  ) : (
+                    <>
+                      <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
+                      <td className="px-4 py-3 text-sm">{r.report_type}</td>
+                      <td className="px-4 py-3 text-sm uppercase">{r.format}</td>
+                      <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${r.status === "completed" ? "bg-green-100 text-green-800" : r.status === "generating" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{r.status}</span></td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => startEdit(r)} className="text-sm text-blue-600 hover:underline">Edit</button>
+                          {r.status === "completed" && (
+                            <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-green-600 hover:underline">Download</button>
+                          )}
+                          <button onClick={() => handleDelete(r.id)} className="text-sm text-red-600 hover:underline">Delete</button>
+                        </div>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

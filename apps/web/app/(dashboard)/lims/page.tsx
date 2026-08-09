@@ -33,6 +33,8 @@ export default function LimsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ sample_code: "", sample_type: "DNA", name: "", location: "" });
   const [selectedSample, setSelectedSample] = useState<Sample | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", sample_type: "DNA", status: "active", location: "" });
 
   useEffect(() => { loadData(); }, []);
 
@@ -60,6 +62,24 @@ export default function LimsPage() {
       loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const startEdit = (s: Sample) => {
+    setEditingId(s.id);
+    setEditForm({ name: s.name, sample_type: s.sample_type, status: s.status, location: s.location || "" });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateSample(editingId, editForm);
+      setEditingId(null);
+      setSelectedSample(null);
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
     }
   };
 
@@ -134,18 +154,59 @@ export default function LimsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
             <h2 className="text-xl font-bold mb-4">Sample Details</h2>
-            <div className="space-y-3">
-              <div><span className="font-medium">Code:</span> {selectedSample.sample_code}</div>
-              <div><span className="font-medium">Name:</span> {selectedSample.name}</div>
-              <div><span className="font-medium">Type:</span> {selectedSample.sample_type}</div>
-              <div><span className="font-medium">Status:</span> {selectedSample.status}</div>
-              <div><span className="font-medium">Location:</span> {selectedSample.location || "-"}</div>
-              <div><span className="font-medium">Created:</span> {new Date(selectedSample.created_at).toLocaleString()}</div>
-            </div>
-            <div className="flex gap-2 justify-end mt-6">
-              <button onClick={() => setSelectedSample(null)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Close</button>
-              <button onClick={() => handleDeleteSample(selectedSample.id)} className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700">Delete</button>
-            </div>
+            {editingId === selectedSample.id ? (
+              <form onSubmit={handleUpdate} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium">Name</label>
+                  <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Type</label>
+                  <select value={editForm.sample_type} onChange={(e) => setEditForm({ ...editForm, sample_type: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2">
+                    <option value="DNA">DNA</option>
+                    <option value="RNA">RNA</option>
+                    <option value="protein">Protein</option>
+                    <option value="tissue">Tissue</option>
+                    <option value="seed">Seed</option>
+                    <option value="leaf">Leaf</option>
+                    <option value="root">Root</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Status</label>
+                  <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2">
+                    <option value="active">Active</option>
+                    <option value="consumed">Consumed</option>
+                    <option value="discarded">Discarded</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Location</label>
+                  <input type="text" value={editForm.location} onChange={(e) => setEditForm({ ...editForm, location: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2" />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button type="button" onClick={() => setEditingId(null)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Cancel</button>
+                  <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700">Save</button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <div><span className="font-medium">Code:</span> {selectedSample.sample_code}</div>
+                  <div><span className="font-medium">Name:</span> {selectedSample.name}</div>
+                  <div><span className="font-medium">Type:</span> {selectedSample.sample_type}</div>
+                  <div><span className="font-medium">Status:</span> {selectedSample.status}</div>
+                  <div><span className="font-medium">Location:</span> {selectedSample.location || "-"}</div>
+                  <div><span className="font-medium">Created:</span> {new Date(selectedSample.created_at).toLocaleString()}</div>
+                </div>
+                <div className="flex gap-2 justify-end mt-6">
+                  <button onClick={() => startEdit(selectedSample)} className="rounded-md border border-blue-300 px-4 py-2 text-blue-600 hover:bg-blue-50">Edit</button>
+                  <button onClick={() => setSelectedSample(null)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Close</button>
+                  <button onClick={() => handleDeleteSample(selectedSample.id)} className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700">Delete</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -177,7 +238,10 @@ export default function LimsPage() {
                     <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${s.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}>{s.status}</span></td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{s.location || "-"}</td>
                     <td className="px-4 py-3">
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteSample(s.id); }} className="text-xs text-red-600 hover:underline">Delete</button>
+                      <div className="flex gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); startEdit(s); setSelectedSample(s); }} className="text-xs text-blue-600 hover:underline">Edit</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteSample(s.id); }} className="text-xs text-red-600 hover:underline">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}

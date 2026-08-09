@@ -22,6 +22,8 @@ export default function GenomicsPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", sequence_type: "genome", organism: "", chromosome: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", sequence_type: "genome", organism: "", chromosome: "" });
 
   useEffect(() => { loadSequences(); }, []);
 
@@ -47,6 +49,29 @@ export default function GenomicsPage() {
       loadSequences();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const startEdit = (seq: Sequence) => {
+    setEditingId(seq.id);
+    setEditForm({
+      name: seq.name,
+      description: seq.description || "",
+      sequence_type: seq.sequence_type,
+      organism: seq.organism || "",
+      chromosome: seq.chromosome || "",
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateSequence(editingId, editForm);
+      setEditingId(null);
+      loadSequences();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
     }
   };
 
@@ -125,14 +150,37 @@ export default function GenomicsPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {sequences.map((seq) => (
             <div key={seq.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow">
-              <h3 className="font-semibold text-lg mb-1">{seq.name}</h3>
-              <p className="text-sm text-muted-foreground">{seq.sequence_type}</p>
-              {seq.organism && <p className="text-xs text-muted-foreground mt-1">{seq.organism}</p>}
-              {seq.chromosome && <p className="text-xs text-muted-foreground">Chr: {seq.chromosome}</p>}
-              {seq.length && <p className="text-xs text-muted-foreground">Length: {seq.length.toLocaleString()} bp</p>}
-              <div className="flex gap-2 mt-3">
-                <button onClick={() => handleDelete(seq.id)} className="text-xs text-red-600 hover:underline">Delete</button>
-              </div>
+              {editingId === seq.id ? (
+                <form onSubmit={handleUpdate} className="space-y-3">
+                  <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm font-semibold" placeholder="Name" />
+                  <select value={editForm.sequence_type} onChange={(e) => setEditForm({ ...editForm, sequence_type: e.target.value })} className="w-full rounded border px-2 py-1 text-sm">
+                    <option value="genome">Genome</option>
+                    <option value="exome">Exome</option>
+                    <option value="transcriptome">Transcriptome</option>
+                    <option value="amplicon">Amplicon</option>
+                    <option value="metagenome">Metagenome</option>
+                  </select>
+                  <input type="text" value={editForm.organism} onChange={(e) => setEditForm({ ...editForm, organism: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" placeholder="Organism" />
+                  <input type="text" value={editForm.chromosome} onChange={(e) => setEditForm({ ...editForm, chromosome: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" placeholder="Chromosome" />
+                  <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" rows={2} placeholder="Description" />
+                  <div className="flex gap-2">
+                    <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
+                    <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-lg mb-1">{seq.name}</h3>
+                  <p className="text-sm text-muted-foreground">{seq.sequence_type}</p>
+                  {seq.organism && <p className="text-xs text-muted-foreground mt-1">{seq.organism}</p>}
+                  {seq.chromosome && <p className="text-xs text-muted-foreground">Chr: {seq.chromosome}</p>}
+                  {seq.length && <p className="text-xs text-muted-foreground">Length: {seq.length.toLocaleString()} bp</p>}
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => startEdit(seq)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(seq.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>

@@ -21,6 +21,8 @@ export default function NotebookPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", entry_type: "note", tags: "" });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", content: "", entry_type: "note", tags: "" });
 
   useEffect(() => { loadEntries(); }, []);
 
@@ -49,6 +51,33 @@ export default function NotebookPage() {
       loadEntries();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    }
+  };
+
+  const startEdit = (entry: NotebookEntry) => {
+    setEditingId(entry.id);
+    setEditForm({
+      title: entry.title,
+      content: entry.content,
+      entry_type: entry.entry_type,
+      tags: entry.tags?.join(", ") || "",
+    });
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await apiClient.updateNotebookEntry(editingId, {
+        title: editForm.title,
+        content: editForm.content,
+        entry_type: editForm.entry_type,
+        tags: editForm.tags ? editForm.tags.split(",").map((t) => t.trim()) : undefined,
+      });
+      setEditingId(null);
+      loadEntries();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
     }
   };
 
@@ -117,29 +146,51 @@ export default function NotebookPage() {
       ) : (
         <div className="space-y-4">
           {entries.map((entry) => (
-            <div key={entry.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}>
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-lg">{entry.title}</h3>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">{entry.entry_type}</span>
-                  {entry.is_locked && <span className="text-xs text-muted-foreground">Locked</span>}
-                </div>
-              </div>
-              {expandedId === entry.id ? (
-                <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap mt-2">{entry.content}</pre>
+            <div key={entry.id} className="rounded-lg border p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { if (editingId !== entry.id) setExpandedId(expandedId === entry.id ? null : entry.id); }}>
+              {editingId === entry.id ? (
+                <form onSubmit={handleUpdate} className="space-y-3" onClick={(e) => e.stopPropagation()}>
+                  <input type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full rounded border px-2 py-1 text-sm font-semibold" placeholder="Title" />
+                  <select value={editForm.entry_type} onChange={(e) => setEditForm({ ...editForm, entry_type: e.target.value })} className="w-full rounded border px-2 py-1 text-sm">
+                    <option value="note">Note</option>
+                    <option value="protocol">Protocol</option>
+                    <option value="observation">Observation</option>
+                    <option value="analysis">Analysis</option>
+                    <option value="result">Result</option>
+                  </select>
+                  <textarea value={editForm.content} onChange={(e) => setEditForm({ ...editForm, content: e.target.value })} className="w-full rounded border px-2 py-1 text-sm font-mono" rows={8} placeholder="Content" />
+                  <input type="text" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" placeholder="Tags (comma separated)" />
+                  <div className="flex gap-2">
+                    <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
+                    <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                  </div>
+                </form>
               ) : (
-                <p className="text-sm text-muted-foreground line-clamp-3 font-mono">{entry.content}</p>
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-lg">{entry.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">{entry.entry_type}</span>
+                      {entry.is_locked && <span className="text-xs text-muted-foreground">Locked</span>}
+                    </div>
+                  </div>
+                  {expandedId === entry.id ? (
+                    <pre className="text-sm text-muted-foreground font-mono whitespace-pre-wrap mt-2">{entry.content}</pre>
+                  ) : (
+                    <p className="text-sm text-muted-foreground line-clamp-3 font-mono">{entry.content}</p>
+                  )}
+                  {entry.tags && entry.tags.length > 0 && (
+                    <div className="flex gap-1 mt-3 flex-wrap">
+                      {entry.tags.map((tag) => (
+                        <span key={tag} className="rounded bg-gray-100 px-2 py-0.5 text-xs">{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => startEdit(entry)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                  </div>
+                </>
               )}
-              {entry.tags && entry.tags.length > 0 && (
-                <div className="flex gap-1 mt-3 flex-wrap">
-                  {entry.tags.map((tag) => (
-                    <span key={tag} className="rounded bg-gray-100 px-2 py-0.5 text-xs">{tag}</span>
-                  ))}
-                </div>
-              )}
-              <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-                <button onClick={() => handleDelete(entry.id)} className="text-xs text-red-600 hover:underline">Delete</button>
-              </div>
             </div>
           ))}
         </div>

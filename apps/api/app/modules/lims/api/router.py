@@ -149,6 +149,65 @@ async def delete_sample(
 
     await db.delete(sample)
     await db.commit()
+    return {"detail": "Sample deleted"}
+
+
+class UpdateSampleRequest(BaseModel):
+    name: str | None = None
+    sample_type: str | None = None
+    status: str | None = None
+    location: str | None = None
+    quantity: float | None = None
+    unit: str | None = None
+
+
+@router.put("/samples/{sample_id}")
+async def update_sample(
+    sample_id: str,
+    body: UpdateSampleRequest,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(SampleModel).where(
+            SampleModel.id == sample_id,
+            SampleModel.created_by == current_user["id"],
+        )
+    )
+    sample = result.scalar_one_or_none()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+
+    if body.name is not None:
+        sample.name = body.name
+    if body.sample_type is not None:
+        sample.sample_type = body.sample_type
+    if body.status is not None:
+        sample.status = body.status
+    if body.location is not None:
+        sample.location = body.location
+    if body.quantity is not None:
+        sample.quantity = body.quantity
+    if body.unit is not None:
+        sample.unit = body.unit
+
+    await db.commit()
+    await db.refresh(sample)
+
+    return {
+        "id": str(sample.id),
+        "sample_code": sample.sample_code,
+        "sample_type": sample.sample_type,
+        "name": sample.name,
+        "status": sample.status,
+        "location": sample.location,
+        "quantity": sample.quantity,
+        "unit": sample.unit,
+        "created_at": sample.created_at.isoformat(),
+    }
+
+    await db.delete(sample)
+    await db.commit()
     return {"message": "Sample deleted"}
 
 

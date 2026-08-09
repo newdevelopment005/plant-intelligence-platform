@@ -536,15 +536,29 @@ class ApiClient {
   }
 
   // =============================================
-  // Phenotyping (Delete)
+  // Phenotyping (Update/Delete)
   // =============================================
+  async updateExperiment(id: string, data: any) {
+    return this.request<any>(`/phenotyping/experiments/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteExperiment(id: string) {
     return this.request<any>(`/phenotyping/experiments/${id}`, { method: "DELETE" });
   }
 
   // =============================================
-  // Genomics (Delete)
+  // Genomics (Update/Delete)
   // =============================================
+  async updateSequence(id: string, data: any) {
+    return this.request<any>(`/genomics/sequences/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteSequence(id: string) {
     return this.request<any>(`/genomics/sequences/${id}`, { method: "DELETE" });
   }
@@ -557,8 +571,15 @@ class ApiClient {
   }
 
   // =============================================
-  // LIMS (Delete Sample)
+  // LIMS (Update/Delete Sample)
   // =============================================
+  async updateSample(id: string, data: any) {
+    return this.request<any>(`/lims/samples/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteSample(id: string) {
     return this.request<any>(`/lims/samples/${id}`, { method: "DELETE" });
   }
@@ -661,6 +682,13 @@ class ApiClient {
   async createReport(data: any) {
     return this.request<any>("/reports", {
       method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateReport(id: string, data: any) {
+    return this.request<any>(`/reports/${id}`, {
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
