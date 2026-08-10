@@ -27,7 +27,11 @@ class CreateShareUseCase:
         if not item_type or not item_type.strip():
             raise ValidationException("Item type is required")
 
-        valid_types = ("image", "entity", "paper", "project", "accession")
+        valid_types = (
+        "image", "entity", "paper", "project", "accession",
+        "report", "notebook_entry", "sample", "team", "germplasm",
+        "experiment",
+    )
         if item_type not in valid_types:
             raise ValidationException(f"Invalid item type. Must be one of: {', '.join(valid_types)}")
 
@@ -46,7 +50,7 @@ class CreateShareUseCase:
         share = ShareModel(
             id=_uuid.uuid4(),
             item_type=item_type.strip(),
-            item_id=_uuid.UUID(item_id) if not isinstance(item_id, _uuid.UUID) else item_id,
+            item_id=str(item_id).strip(),
             owner_id=_uuid.UUID(owner_id) if not isinstance(owner_id, _uuid.UUID) else owner_id,
             visibility=visibility,
             share_token=share_token,

@@ -2,6 +2,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+from app.core.serializers import OrmSerializableMixin
+
 
 class CreatePaperRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=1000)
@@ -38,7 +40,7 @@ class UpdatePaperRequest(BaseModel):
     summary: str | None = Field(None, max_length=10000)
 
 
-class PaperResponse(BaseModel):
+class PaperResponse(OrmSerializableMixin):
     id: str
     title: str
     abstract: str | None = None
@@ -88,7 +90,7 @@ class UpdateCollectionRequest(BaseModel):
     tags: list[str] | None = Field(None, max_length=20)
 
 
-class CollectionResponse(BaseModel):
+class CollectionResponse(OrmSerializableMixin):
     id: str
     name: str
     description: str | None = None
@@ -125,7 +127,7 @@ class UpdateNoteRequest(BaseModel):
     tags: list[str] | None = Field(None, max_length=20)
 
 
-class NoteResponse(BaseModel):
+class NoteResponse(OrmSerializableMixin):
     id: str
     paper_id: str
     content: str

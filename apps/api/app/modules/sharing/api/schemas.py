@@ -1,10 +1,12 @@
 from pydantic import BaseModel, Field
 
+from app.core.serializers import OrmSerializableMixin
+
 
 class CreateShareRequest(BaseModel):
     item_type: str = Field(
         ...,
-        pattern="^(image|entity|paper|project|accession)$",
+        pattern="^(image|entity|paper|project|accession|report|notebook_entry|sample|team|germplasm|experiment)$",
     )
     item_id: str
     visibility: str = Field(
@@ -18,14 +20,14 @@ class CreateShareRequest(BaseModel):
     )
 
 
-class ShareRecipientResponse(BaseModel):
+class ShareRecipientResponse(OrmSerializableMixin):
     id: str
     user_id: str
     permission: str
     shared_at: str
 
 
-class ShareResponse(BaseModel):
+class ShareResponse(OrmSerializableMixin):
     id: str
     item_type: str
     item_id: str
@@ -37,17 +39,17 @@ class ShareResponse(BaseModel):
     recipients: list[ShareRecipientResponse] = []
 
 
-class SharedWithMeItemResponse(BaseModel):
+class SharedWithMeItemResponse(OrmSerializableMixin):
     share: ShareResponse
     recipient: ShareRecipientResponse
 
 
-class MyShareItemResponse(BaseModel):
+class MyShareItemResponse(OrmSerializableMixin):
     share: ShareResponse
     recipients: list[ShareRecipientResponse]
 
 
-class ShareLinkAccessResponse(BaseModel):
+class ShareLinkAccessResponse(OrmSerializableMixin):
     id: str
     item_type: str
     item_id: str

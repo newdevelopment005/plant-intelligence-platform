@@ -16,7 +16,7 @@ class ShareModel(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     item_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    item_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    item_id: Mapped[str] = mapped_column(String(255), nullable=False)
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),

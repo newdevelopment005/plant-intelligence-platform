@@ -2,6 +2,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+from app.core.serializers import OrmSerializableMixin
+
 
 class CreateMoleculeExperimentRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -37,7 +39,7 @@ class UpdateMoleculeExperimentRequest(BaseModel):
     tags: list[str] | None = Field(None, max_length=20)
 
 
-class MoleculeExperimentResponse(BaseModel):
+class MoleculeExperimentResponse(OrmSerializableMixin):
     id: str
     name: str
     description: str | None = None
@@ -89,7 +91,7 @@ class UpdatePrimerRequest(BaseModel):
     notes: str | None = Field(None, max_length=5000)
 
 
-class PrimerResponse(BaseModel):
+class PrimerResponse(OrmSerializableMixin):
     id: str
     experiment_id: str
     name: str
@@ -151,7 +153,7 @@ class UpdateConstructRequest(BaseModel):
     tags: list[str] | None = Field(None, max_length=20)
 
 
-class ConstructResponse(BaseModel):
+class ConstructResponse(OrmSerializableMixin):
     id: str
     experiment_id: str
     name: str
