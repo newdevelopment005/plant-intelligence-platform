@@ -27,15 +27,44 @@ interface SystemHealth {
   uptime: string;
 }
 
+interface Department {
+  id: string;
+  name: string;
+  code: string | null;
+  description: string | null;
+  head_user_id: string | null;
+  is_active: boolean;
+  member_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DepartmentMember {
+  id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+}
+
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"users" | "audit" | "system">("users");
+  const [tab, setTab] = useState<"users" | "audit" | "system" | "departments">("users");
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [stats, setStats] = useState<any>(null);
+
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [deptTotal, setDeptTotal] = useState(0);
+  const [depLoading, setDepLoading] = useState(false);
+  const [showDeptForm, setShowDeptForm] = useState(false);
+  const [deptForm, setDeptForm] = useState({ name: "", code: "", description: "", head_user_id: "" });
+  const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const [deptMembers, setDeptMembers] = useState<DepartmentMember[]>([]);
+  const [deptMemberUsers, setDeptMemberUsers] = useState<Record<string, string>>({});
+  const [deptSearch, setDeptSearch] = useState("");
 
   useEffect(() => { loadData(); }, []);
 
@@ -81,13 +110,121 @@ export default function AdminPage() {
     }
   };
 
-  const handleTabChange = (newTab: "users" | "audit" | "system") => {
+  const handleTabChange = (newTab: "users" | "audit" | "system" | "departments") => {
     setTab(newTab);
     if (newTab === "system") {
       loadSystemHealth();
       loadStats();
     }
+    if (newTab === "departments") {
+      loadDepartments();
+    }
   };
+
+  const loadDepartments = async () => {
+    setDepLoading(true);
+    try {
+      const data = await apiClient.listDepartments({ limit: 500 });
+      setDepartments(data?.items ?? []);
+      setDeptTotal(data?.total ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load departments");
+      setTimeout(() => setError(""), 4000);
+    } finally { setDepLoading(false); }
+  };
+
+  const loadDeptMembers = async (deptId: string) => {
+    try {
+      const data = await apiClient.getDepartment(deptId);
+      setSelectedDept(deptId);
+      setDeptMembers(data?.members ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load department");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleDeptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await apiClient.createDepartment({
+        name: deptForm.name,
+        code: deptForm.code || undefined,
+        description: deptForm.description || undefined,
+        head_user_id: deptForm.head_user_id || undefined,
+      });
+      setShowDeptForm(false);
+      setDeptForm({ name: "", code: "", description: "", head_user_id: "" });
+      await loadDepartments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create department");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleDeptDelete = async (deptId: string) => {
+    if (!window.confirm("Delete this department? This removes all memberships.")) return;
+    try {
+      await apiClient.deleteDepartment(deptId);
+      if (selectedDept === deptId) { setSelectedDept(null); setDeptMembers([]); }
+      await loadDepartments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete department");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleAddDeptMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDept) return;
+    const userId = (e.target as any).userId.value?.trim();
+    const role = (e.target as any).role.value ?? "member";
+    if (!userId) { setError("Enter a user ID or email is not supported - use a user ID"); setTimeout(() => setError(""), 4000); return; }
+    try {
+      await apiClient.addDepartmentMember(selectedDept, { user_id: userId, role });
+      await loadDeptMembers(selectedDept);
+      await loadDepartments();
+      (e.target as HTMLFormElement).reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add member");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleDeptMemberRole = async (deptId: string, memberUserId: string, role: string) => {
+    try {
+      await apiClient.updateDepartmentMemberRole(deptId, memberUserId, role);
+      await loadDeptMembers(deptId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update role");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleDeptMemberRemove = async (deptId: string, memberUserId: string) => {
+    if (!window.confirm("Remove this member from the department?")) return;
+    try {
+      await apiClient.removeDepartmentMember(deptId, memberUserId);
+      await loadDeptMembers(deptId);
+      await loadDepartments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove member");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleDeptToggleActive = async (dept: Department) => {
+    try {
+      await apiClient.updateDepartment(dept.id, { is_active: !dept.is_active });
+      await loadDepartments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update department");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const resolveMemberName = (userId: string) =>
+    deptMemberUsers[userId] || users.find((u) => u.id === userId)?.full_name || userId.slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -100,6 +237,7 @@ export default function AdminPage() {
         <button onClick={() => handleTabChange("users")} className={`pb-2 px-4 text-sm font-medium ${tab === "users" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Users</button>
         <button onClick={() => handleTabChange("audit")} className={`pb-2 px-4 text-sm font-medium ${tab === "audit" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Audit Log</button>
         <button onClick={() => handleTabChange("system")} className={`pb-2 px-4 text-sm font-medium ${tab === "system" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>System</button>
+        <button onClick={() => handleTabChange("departments")} className={`pb-2 px-4 text-sm font-medium ${tab === "departments" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Departments</button>
       </div>
 
       {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
@@ -182,7 +320,7 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : tab === "system" ? (
         <div className="space-y-6">
           <div className="rounded-lg border bg-card p-6">
             <h2 className="text-lg font-semibold mb-4">System Health</h2>
@@ -237,6 +375,156 @@ export default function AdminPage() {
             <div className="flex gap-3">
               <button onClick={() => { loadSystemHealth(); loadStats(); }} className="rounded-md border px-4 py-2 hover:bg-gray-50">Refresh</button>
               <button onClick={loadData} className="rounded-md border px-4 py-2 hover:bg-gray-50">Reload Users</button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Departments</h2>
+              <p className="text-sm text-muted-foreground">{deptTotal} department{deptTotal === 1 ? "" : "s"}</p>
+            </div>
+            <div className="flex gap-3">
+              <input
+                value={deptSearch}
+                onChange={(e) => setDeptSearch(e.target.value)}
+                placeholder="Search departments..."
+                className="rounded-md border px-3 py-2 text-sm"
+              />
+              <button onClick={() => setShowDeptForm(!showDeptForm)} className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
+                {showDeptForm ? "Cancel" : "+ New Department"}
+              </button>
+            </div>
+          </div>
+
+          {showDeptForm && (
+            <form onSubmit={handleDeptSubmit} className="rounded-lg border bg-card p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name *</label>
+                  <input required value={deptForm.name} onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })} className="w-full rounded-md border px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Code</label>
+                  <input value={deptForm.code} onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })} placeholder="e.g. MOLBIO" className="w-full rounded-md border px-3 py-2" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea value={deptForm.description} onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })} rows={2} className="w-full rounded-md border px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Department Head (user ID)</label>
+                <input value={deptForm.head_user_id} onChange={(e) => setDeptForm({ ...deptForm, head_user_id: e.target.value })} placeholder="Optional - user ID" className="w-full rounded-md border px-3 py-2" />
+              </div>
+              <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">Create Department</button>
+            </form>
+          )}
+
+          <div className="grid grid-cols-3 gap-6">
+            <div className="col-span-1 rounded-lg border overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Department</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Members</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {depLoading ? (
+                    <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                  ) : departments.filter((d) => d.name.toLowerCase().includes(deptSearch.toLowerCase())).map((dep) => (
+                    <tr key={dep.id} className="border-t hover:bg-muted/20">
+                      <td className="px-4 py-3">
+                        <button onClick={() => loadDeptMembers(dep.id)} className="text-left">
+                          <div className="text-sm font-medium hover:underline">{dep.name}</div>
+                          <div className="text-xs text-muted-foreground">{dep.code || "-"}</div>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{dep.member_count}</td>
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-1 text-xs font-medium ${dep.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                          {dep.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 text-sm">
+                          <button onClick={() => handleDeptToggleActive(dep)} className="text-blue-600 hover:underline">{dep.is_active ? "Deactivate" : "Activate"}</button>
+                          <button onClick={() => handleDeptDelete(dep.id)} className="text-red-600 hover:underline">Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {departments.length === 0 && !depLoading && (
+                    <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No departments. Create one to get started.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="col-span-2 rounded-lg border bg-card p-6">
+              {selectedDept ? (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">{departments.find((d) => d.id === selectedDept)?.name}</h3>
+                      <p className="text-sm text-muted-foreground">{deptMembers.length} members</p>
+                    </div>
+                    <button onClick={() => { setSelectedDept(null); setDeptMembers([]); }} className="text-sm text-muted-foreground hover:text-gray-900">Back to list</button>
+                  </div>
+
+                  <form onSubmit={handleAddDeptMember} className="mb-4 flex gap-2">
+                    <input name="userId" placeholder="User ID" className="flex-1 rounded-md border px-3 py-2 text-sm" />
+                    <select name="role" className="rounded-md border px-3 py-2 text-sm">
+                      <option value="member">Member</option>
+                      <option value="head">Head</option>
+                    </select>
+                    <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">Add Member</button>
+                  </form>
+
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium">User</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Role</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Joined</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deptMembers.map((m) => (
+                        <tr key={m.id} className="border-t hover:bg-muted/20">
+                          <td className="px-4 py-3 text-sm font-medium">{resolveMemberName(m.user_id)}</td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={m.role}
+                              onChange={(e) => handleDeptMemberRole(selectedDept, m.user_id, e.target.value)}
+                              className="rounded border px-2 py-1 text-sm"
+                            >
+                              <option value="member">Member</option>
+                              <option value="head">Head</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">{new Date(m.joined_at).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <button onClick={() => handleDeptMemberRemove(selectedDept, m.user_id)} className="text-red-600 hover:underline">Remove</button>
+                          </td>
+                        </tr>
+                      ))}
+                      {deptMembers.length === 0 && (
+                        <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">No members yet</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex h-full min-h-[300px] items-center justify-center text-muted-foreground">
+                  Select a department to manage its members
+                </div>
+              )}
             </div>
           </div>
         </div>

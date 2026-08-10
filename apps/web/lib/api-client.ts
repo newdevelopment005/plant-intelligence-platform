@@ -801,6 +801,65 @@ class ApiClient {
   async deleteTeam(teamId: string) {
     return this.request<void>(`/teams/${teamId}`, { method: "DELETE" });
   }
+
+  // =============================================
+  // Departments
+  // =============================================
+  async listDepartments(params?: { skip?: number; limit?: number; search?: string }) {
+    const qs = params
+      ? `?${new URLSearchParams(
+          (Object.entries(params).filter(([, v]) => v !== undefined && v !== "") as [string, string][])
+        ).toString()}`
+      : "";
+    return this.request<{ items: any[]; total: number; skip: number; limit: number }>(
+      `/departments${qs}`
+    );
+  }
+
+  async getDepartment(departmentId: string) {
+    return this.request<any>(`/departments/${departmentId}`);
+  }
+
+  async createDepartment(data: { name: string; code?: string; description?: string; head_user_id?: string }) {
+    return this.request<any>("/departments", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDepartment(
+    departmentId: string,
+    data: { name?: string; code?: string; description?: string; head_user_id?: string; is_active?: boolean }
+  ) {
+    return this.request<any>(`/departments/${departmentId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDepartment(departmentId: string) {
+    return this.request<void>(`/departments/${departmentId}`, { method: "DELETE" });
+  }
+
+  async addDepartmentMember(departmentId: string, data: { user_id: string; role?: string }) {
+    return this.request<any>(`/departments/${departmentId}/members`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateDepartmentMemberRole(departmentId: string, targetUserId: string, role: string) {
+    return this.request<any>(`/departments/${departmentId}/members/${targetUserId}`, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async removeDepartmentMember(departmentId: string, targetUserId: string) {
+    return this.request<void>(`/departments/${departmentId}/members/${targetUserId}`, {
+      method: "DELETE",
+    });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);
