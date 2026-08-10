@@ -14,6 +14,7 @@ class CreateShareRequest(BaseModel):
         pattern="^(private|link|public)$",
     )
     user_ids: list[str] | None = Field(None, max_length=100)
+    emails: list[str] | None = Field(None, max_length=100)
     permission: str = Field(
         "read",
         pattern="^(read|write)$",
@@ -25,6 +26,7 @@ class ShareRecipientResponse(OrmSerializableMixin):
     user_id: str
     permission: str
     shared_at: str
+    user: dict | None = None
 
 
 class ShareResponse(OrmSerializableMixin):

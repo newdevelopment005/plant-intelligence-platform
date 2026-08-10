@@ -11,6 +11,11 @@ class AddTeamMemberRequest(BaseModel):
     role: str = Field(default="member", pattern="^(admin|member)$")
 
 
+class InviteTeamMemberByEmailRequest(BaseModel):
+    email: str
+    role: str = Field(default="member", pattern="^(admin|member)$")
+
+
 class TeamResponse(BaseModel):
     id: str
     name: str
@@ -30,3 +35,4 @@ class TeamMemberResponse(BaseModel):
     user_id: str
     role: str
     joined_at: str
+    user: dict | None = None

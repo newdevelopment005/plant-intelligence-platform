@@ -35,13 +35,48 @@ def _share_to_dict(share) -> dict:
     }
 
 
-def _recipient_to_dict(recipient) -> dict:
-    return {
+def _recipient_to_dict(recipient, user: dict | None = None) -> dict:
+    result = {
         "id": str(recipient.id),
         "user_id": str(recipient.user_id),
         "permission": recipient.permission,
         "shared_at": recipient.shared_at.isoformat(),
     }
+    if user:
+        result["user"] = {
+            "id": str(user.get("id") or user.get("user_id")),
+            "full_name": user.get("full_name"),
+            "email": user.get("email"),
+        }
+    return result
+
+
+async def _users_by_ids(db: AsyncSession, user_ids: list[str]) -> dict:
+    from app.modules.auth.infrastructure.repositories import UserRepository
+
+    users = await UserRepository(db).get_by_ids(user_ids)
+    return {str(u.id): {"id": str(u.id), "full_name": u.full_name, "email": u.email} for u in users}
+
+
+def _attach_owner(share_dict: dict, owners: dict) -> dict:
+    owner = owners.get(share_dict.get("owner_id"))
+    if owner:
+        share_dict["owner"] = owner
+    return share_dict
+
+
+async def _resolve_emails_to_user_ids(db: AsyncSession, emails: list[str] | None) -> list[str]:
+    from app.modules.auth.infrastructure.repositories import UserRepository
+
+    if not emails:
+        return []
+    user_repo = UserRepository(db)
+    resolved = []
+    for email in emails:
+        user = await user_repo.get_by_email(email)
+        if user:
+            resolved.append(str(user.id))
+    return resolved
 
 
 @router.post("/share", response_model=ShareResponse, status_code=status.HTTP_201_CREATED)
@@ -55,16 +90,42 @@ async def share_item(
     share_repo = ShareRepository(db)
     recipient_repo = ShareRecipientRepository(db)
     uc = CreateShareUseCase(share_repo=share_repo, recipient_repo=recipient_repo)
+
+    all_user_ids = list(request.user_ids or [])
+    emails = list(request.emails or [])
+    email_ids = await _resolve_emails_to_user_ids(db, emails)
+    all_user_ids.extend(email_ids)
+    all_user_ids = list(dict.fromkeys(all_user_ids))
+
     result = await uc.execute(
         item_type=request.item_type,
         item_id=request.item_id,
         owner_id=current_user["id"],
         visibility=request.visibility,
-        user_ids=request.user_ids,
+        user_ids=all_user_ids,
         permission=request.permission,
     )
     share_dict = _share_to_dict(result["share"])
-    share_dict["recipients"] = [_recipient_to_dict(r) for r in result["recipients"]]
+    recipient_ids = [str(r.user_id) for r in result["recipients"]]
+    users = await _users_by_ids(db, recipient_ids)
+    share_dict["recipients"] = [_recipient_to_dict(r, users.get(str(r.user_id))) for r in result["recipients"]]
+
+    for r in result["recipients"]:
+        user = users.get(str(r.user_id))
+        if user and user.get("email") and user.get("email") != current_user.get("email"):
+            from app.core.email import send_share_notification
+
+            send_share_notification(
+                to_email=user["email"],
+                sharer_name=current_user.get("full_name") or current_user.get("email") or "A colleague",
+                item_type=share_dict["item_type"],
+                item_id=share_dict["item_id"],
+                permission=share_dict["recipients"][0]["permission"],
+                base_url="https://plant-intelligence-platform.vercel.app",
+            )
+
+    if emails and not email_ids:
+        share_dict["unresolved_emails"] = emails
     return share_dict
 
 
@@ -79,10 +140,14 @@ async def list_shared_with_me(
     recipient_repo = ShareRecipientRepository(db)
     uc = ListSharedWithMeUseCase(share_repo=share_repo, recipient_repo=recipient_repo)
     results = await uc.execute(user_id=current_user["id"])
+    user_ids = [str(item["recipient"].user_id) for item in results]
+    users = await _users_by_ids(db, user_ids)
+    owner_ids = [str(item["share"].owner_id) for item in results]
+    owners = await _users_by_ids(db, owner_ids)
     return [
         {
-            "share": _share_to_dict(item["share"]),
-            "recipient": _recipient_to_dict(item["recipient"]),
+            "share": _attach_owner(_share_to_dict(item["share"]), owners),
+            "recipient": _recipient_to_dict(item["recipient"], users.get(str(item["recipient"].user_id))),
         }
         for item in results
     ]
@@ -99,13 +164,18 @@ async def list_my_shares(
     recipient_repo = ShareRecipientRepository(db)
     uc = ListMySharesUseCase(share_repo=share_repo, recipient_repo=recipient_repo)
     results = await uc.execute(owner_id=current_user["id"])
-    return [
-        {
-            "share": _share_to_dict(item["share"]),
-            "recipients": [_recipient_to_dict(r) for r in item["recipients"]],
-        }
-        for item in results
-    ]
+    serialized = []
+    for item in results:
+        recipient_ids = [str(r.user_id) for r in item["recipients"]]
+        users = await _users_by_ids(db, recipient_ids)
+        owners = await _users_by_ids(db, [str(item["share"].owner_id)])
+        serialized.append(
+            {
+                "share": _attach_owner(_share_to_dict(item["share"]), owners),
+                "recipients": [_recipient_to_dict(r, users.get(str(r.user_id))) for r in item["recipients"]],
+            }
+        )
+    return serialized
 
 
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)

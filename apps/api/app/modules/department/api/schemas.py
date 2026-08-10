@@ -44,8 +44,15 @@ class PaginatedDepartmentsResponse(BaseModel):
     limit: int
 
 
+class UserBrief(BaseModel):
+    id: str
+    full_name: str | None = None
+    email: str | None = None
+
+
 class DepartmentMemberResponse(BaseModel):
     id: str
     user_id: str
     role: str
     joined_at: str
+    user: UserBrief | None = None

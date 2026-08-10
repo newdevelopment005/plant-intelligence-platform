@@ -31,6 +31,31 @@ logger = structlog.get_logger()
 router = APIRouter(redirect_slashes=False)
 
 
+async def _user_summary(db: AsyncSession, user_id: str) -> dict | None:
+    from app.modules.auth.infrastructure.repositories import UserRepository
+
+    user = await UserRepository(db).get_by_id(user_id)
+    if not user:
+        return None
+    return {
+        "id": str(user.id),
+        "full_name": user.full_name,
+        "email": user.email,
+    }
+
+
+async def _members_with_users(db: AsyncSession, members) -> list[dict]:
+    from app.modules.auth.infrastructure.repositories import UserRepository
+
+    user_ids = [str(m.user_id) for m in members]
+    users = await UserRepository(db).get_by_ids(user_ids)
+    by_id = {str(u.id): u for u in users}
+    return [
+        _member_to_dict(m, by_id.get(str(m.user_id)))
+        for m in members
+    ]
+
+
 def _get_department_repo(db: AsyncSession) -> DepartmentRepository:
     return DepartmentRepository(db)
 
@@ -52,12 +77,44 @@ def _department_to_dict(dep) -> dict:
     }
 
 
-def _member_to_dict(member) -> dict:
-    return {
+def _member_to_dict(member, user=None) -> dict:
+    result = {
         "id": str(member.id),
         "user_id": str(member.user_id),
         "role": member.role,
         "joined_at": member.joined_at.isoformat(),
+    }
+    if user:
+        import uuid as _uuid
+
+        user_id = (
+            user.get("id") or user.get("user_id")
+            if isinstance(user, dict)
+            else str(user.id) if getattr(user, "id", None) else str(member.user_id)
+        )
+        if isinstance(user_id, _uuid.UUID):
+            user_id = str(user_id)
+        if isinstance(user, dict):
+            full_name = user.get("full_name")
+            email = user.get("email")
+        else:
+            full_name = getattr(user, "full_name", None)
+            email = getattr(user, "email", None)
+        result["user"] = {
+            "id": user_id,
+            "full_name": full_name,
+            "email": email,
+        }
+    return result
+
+
+def _head_user_dict(dep) -> dict | None:
+    if not dep or not dep.head_user_id:
+        return None
+    return {
+        "id": str(dep.head_user_id),
+        "full_name": None,
+        "email": None,
     }
 
 
@@ -151,7 +208,12 @@ async def get_department(
     members = await member_repo.list_members(department_id)
     result = _department_to_dict(department)
     result["member_count"] = len(members)
-    result["members"] = [_member_to_dict(m) for m in members]
+    result["members"] = await _members_with_users(db, members)
+    result["head_user"] = _head_user_dict(department)
+    if department.head_user_id:
+        head = await _user_summary(db, str(department.head_user_id))
+        if head:
+            result["head_user"] = head
     return result
 
 
@@ -170,7 +232,7 @@ async def add_member(
         target_user_id=body.user_id,
         role=body.role,
     )
-    return _member_to_dict(member)
+    return _member_to_dict(member, await _user_summary(db, str(member.user_id)))
 
 
 @router.put("/{department_id}/members/{target_user_id}", response_model=DepartmentMemberResponse)
@@ -189,7 +251,7 @@ async def update_member_role(
         target_user_id=target_user_id,
         role=body.role,
     )
-    return _member_to_dict(member)
+    return _member_to_dict(member, await _user_summary(db, str(member.user_id)))
 
 
 @router.delete("/{department_id}/members/{target_user_id}")

@@ -173,25 +173,23 @@ export default function TeamsPage() {
     setInviting(true);
     setError("");
     try {
-      const data = await apiClient.searchUsers(inviteSearchQuery.trim());
-      const users = data?.items ?? [];
-      if (users.length === 0) {
-        setError("No user found with that email. They may need to register first.");
-        setInviting(false);
-        return;
-      }
-      const user = users[0];
-      await apiClient.addTeamMember(teamDetail.id, {
-        user_id: user.id,
+      const res = await apiClient.inviteTeamMemberByEmail(teamDetail.id, {
+        email: inviteSearchQuery.trim(),
         role: inviteRole,
       });
-      setSuccess(`Added ${user.full_name || user.email} to the team`);
+      setSuccess(
+        res?.matched_user
+          ? `Invitation sent to ${res.email}`
+          : `Invitation email sent to ${res?.email ?? inviteSearchQuery.trim()} (they need to register to join).`
+      );
       setInviteSearchQuery("");
       setInviteSearchResults([]);
       setInviteRole("member");
       setShowInviteByEmail(false);
-      loadTeamDetail(teamDetail.id);
-      loadTeams();
+      if (res?.matched_user) {
+        loadTeamDetail(teamDetail.id);
+        loadTeams();
+      }
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to invite");

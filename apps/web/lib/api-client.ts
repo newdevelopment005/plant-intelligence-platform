@@ -755,7 +755,7 @@ class ApiClient {
   // =============================================
   // Sharing
   // =============================================
-  async shareItem(data: { item_type: string; item_id: string; visibility: string; user_ids?: string[]; permission?: string }) {
+  async shareItem(data: { item_type: string; item_id: string; visibility: string; user_ids?: string[]; emails?: string[]; permission?: string }) {
     return this.request<any>("/sharing/share", {
       method: "POST",
       body: JSON.stringify(data),
@@ -763,11 +763,11 @@ class ApiClient {
   }
 
   async getSharedWithMe() {
-    return this.request<{ items: any[] }>("/sharing/shared-with-me");
+    return this.request<any[]>("/sharing/shared-with-me");
   }
 
   async getMyShares() {
-    return this.request<{ items: any[] }>("/sharing/my-shares");
+    return this.request<any[]>("/sharing/my-shares");
   }
 
   async revokeShare(shareId: string) {
@@ -794,6 +794,13 @@ class ApiClient {
 
   async addTeamMember(teamId: string, data: { user_id: string; role?: string }) {
     return this.request<any>(`/teams/${teamId}/members`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async inviteTeamMemberByEmail(teamId: string, data: { email: string; role?: string }) {
+    return this.request<any>(`/teams/${teamId}/invite-by-email`, {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -865,6 +872,62 @@ class ApiClient {
   async removeDepartmentMember(departmentId: string, targetUserId: string) {
     return this.request<void>(`/departments/${departmentId}/members/${targetUserId}`, {
       method: "DELETE",
+    });
+  }
+
+  // =============================================
+  // Meetings
+  // =============================================
+  async listMeetings(params?: { upcoming_only?: string; skip?: number; limit?: number }) {
+    const qs = params
+      ? `?${new URLSearchParams(
+          (Object.entries(params).filter(([, v]) => v !== undefined && v !== "") as [string, string][])
+        ).toString()}`
+      : "";
+    return this.request<{ items: any[]; total: number }>(`/meetings${qs}`);
+  }
+
+  async getMeeting(meetingId: string) {
+    return this.request<any>(`/meetings/${meetingId}`);
+  }
+
+  async createMeeting(data: {
+    title: string;
+    starts_at: string;
+    description?: string;
+    ends_at?: string;
+    location?: string;
+    meeting_link?: string;
+    reminder_option?: string;
+    attendee_emails?: string[];
+  }) {
+    return this.request<any>("/meetings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateMeeting(meetingId: string, data: any) {
+    return this.request<any>(`/meetings/${meetingId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteMeeting(meetingId: string) {
+    return this.request<void>(`/meetings/${meetingId}`, { method: "DELETE" });
+  }
+
+  async updateAttendeeStatus(meetingId: string, attendeeId: string, status: string) {
+    return this.request<any>(`/meetings/${meetingId}/attendees/${attendeeId}`, {
+      method: "PUT",
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async sendMeetingReminders(meetingId: string) {
+    return this.request<any>(`/meetings/${meetingId}/send-reminders`, {
+      method: "POST",
     });
   }
 }

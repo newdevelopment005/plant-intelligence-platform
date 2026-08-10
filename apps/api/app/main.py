@@ -33,6 +33,7 @@ from app.modules.ai_assistant.domain import models as _ai_models  # noqa: F401
 from app.modules.sharing.domain import models as _sharing_models  # noqa: F401
 from app.modules.team.domain import models as _team_models  # noqa: F401
 from app.modules.department.domain import models as _department_models  # noqa: F401
+from app.modules.meeting.domain import models as _meeting_models  # noqa: F401
 
 from app.modules.admin.api.router import router as admin_router
 from app.modules.ai_assistant.api.router import router as ai_assistant_router
@@ -45,6 +46,7 @@ from app.modules.image_analysis.api.router import router as image_analysis_route
 from app.modules.knowledge_graph.api.router import router as knowledge_graph_router
 from app.modules.lims.api.router import router as lims_router
 from app.modules.literature.api.router import router as literature_router
+from app.modules.meeting.api.router import router as meeting_router
 from app.modules.molecular.api.router import router as molecular_router
 from app.modules.notebook.api.router import router as notebook_router
 from app.modules.phenotyping.api.router import router as phenotyping_router
@@ -120,6 +122,7 @@ def create_app() -> FastAPI:
     application.include_router(sharing_router, prefix="/api/v1/sharing", tags=["Sharing"])
     application.include_router(team_router, prefix="/api/v1/teams", tags=["Teams"])
     application.include_router(department_router, prefix="/api/v1/departments", tags=["Departments"])
+    application.include_router(meeting_router, prefix="/api/v1/meetings", tags=["Meetings"])
     application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
 
     @application.get("/storage/{file_path:path}")

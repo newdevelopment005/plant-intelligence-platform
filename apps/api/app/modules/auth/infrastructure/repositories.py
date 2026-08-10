@@ -54,6 +54,12 @@ class UserRepository(UserRepositoryInterface):
         result = await self.db.execute(select(func.count(UserModel.id)))
         return result.scalar_one()
 
+    async def get_by_ids(self, user_ids: list[str]) -> list[UserModel]:
+        if not user_ids:
+            return []
+        result = await self.db.execute(select(UserModel).where(UserModel.id.in_(user_ids)))
+        return list(result.scalars().all())
+
     async def search_by_email_or_name(self, query: str, limit: int = 10) -> list[UserModel]:
         search = f"%{query.lower().strip()}%"
         result = await self.db.execute(

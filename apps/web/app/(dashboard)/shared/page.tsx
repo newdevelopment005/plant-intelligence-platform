@@ -9,8 +9,10 @@ interface SharedItem {
   item_id: string;
   permission: string;
   visibility: string;
+  owner?: { id: string; email: string; full_name: string } | null;
   shared_by?: { id: string; email: string; full_name: string };
   shared_with?: { id: string; email: string; full_name: string };
+  recipients?: { user_id: string; permission: string; user?: { full_name?: string; email?: string } | null }[];
   created_at: string;
 }
 
@@ -27,6 +29,7 @@ export default function SharedPage() {
   const [shareVisibility, setShareVisibility] = useState("private");
   const [sharePermission, setSharePermission] = useState("read");
   const [shareUserId, setShareUserId] = useState("");
+  const [shareEmails, setShareEmails] = useState("");
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
@@ -40,8 +43,24 @@ export default function SharedPage() {
   const loadSharedWithMe = async () => {
     setLoadingShared(true);
     try {
-      const data = await apiClient.getSharedWithMe();
-      setSharedWithMe(data?.items ?? []);
+      const data: any = await apiClient.getSharedWithMe();
+      const list = Array.isArray(data) ? data : (data?.items ?? []);
+      setSharedWithMe(list.map((entry: any) => {
+        const share = entry.share || {};
+        const recipient = entry.recipient || {};
+        return {
+          id: share.id,
+          item_type: share.item_type,
+          item_id: share.item_id,
+          permission: recipient.permission || share.permission || "read",
+          visibility: share.visibility,
+          created_at: share.created_at,
+          owner: share.owner || null,
+          shared_by: share.owner || null,
+          shared_with: recipient.user || null,
+          recipients: [recipient],
+        };
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -52,8 +71,22 @@ export default function SharedPage() {
   const loadMyShares = async () => {
     setLoadingMine(true);
     try {
-      const data = await apiClient.getMyShares();
-      setMyShares(data?.items ?? []);
+      const data: any = await apiClient.getMyShares();
+      const list = Array.isArray(data) ? data : (data?.items ?? []);
+      setMyShares(list.map((entry: any) => {
+        const share = entry.share || {};
+        const recipients = entry.recipients || [];
+        return {
+          id: share.id,
+          item_type: share.item_type,
+          item_id: share.item_id,
+          permission: "read",
+          visibility: share.visibility,
+          created_at: share.created_at,
+          owner: share.owner || null,
+          recipients,
+        };
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
@@ -89,11 +122,18 @@ export default function SharedPage() {
       if (shareUserId.trim()) {
         payload.user_ids = [shareUserId.trim()];
       }
+      if (shareEmails.trim()) {
+        payload.emails = shareEmails
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+      }
       await apiClient.shareItem(payload);
       setSuccess("Item shared successfully");
       setShowShareForm(false);
       setShareItemId("");
       setShareUserId("");
+      setShareEmails("");
       setUserSearchQuery("");
       setUserSearchResults([]);
       loadMyShares();
@@ -141,6 +181,14 @@ export default function SharedPage() {
         {item.shared_with && (
           <p className="text-xs text-muted-foreground">
             Shared with: {item.shared_with.full_name || item.shared_with.email}
+          </p>
+        )}
+        {item.recipients && item.recipients.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Recipients:{" "}
+            {item.recipients
+              .map((r) => r.user?.full_name || r.user?.email || r.user_id.slice(0, 8))
+              .join(", ")}
           </p>
         )}
       </div>
@@ -252,8 +300,21 @@ export default function SharedPage() {
                 )}
               </div>
               {shareUserId && (
-                <div className="text-xs text-green-600 mt-1">Selected user ID: {shareUserId}</div>
+                <div className="text-xs text-green-600 mt-1">Selected user: {userSearchQuery || shareUserId}</div>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Or share by email (optional)</label>
+              <input
+                type="text"
+                value={shareEmails}
+                onChange={(e) => setShareEmails(e.target.value)}
+                placeholder="colleague@lab.edu, another@institute.org"
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Invites are emailed to registered addresses; unregistered ones receive a sign-up notice.
+              </p>
             </div>
             <div className="flex gap-2 justify-end">
               <button type="button" onClick={() => setShowShareForm(false)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Cancel</button>

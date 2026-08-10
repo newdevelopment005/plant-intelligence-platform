@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/api-client";
 
 import {
   LayoutDashboard,
@@ -28,6 +29,7 @@ import {
   Search,
   Users,
   Share2,
+  CalendarClock,
 } from "lucide-react";
 
 const navigation = [
@@ -46,15 +48,52 @@ const navigation = [
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Teams", href: "/teams", icon: Users },
   { name: "Shared", href: "/shared", icon: Share2 },
+  { name: "Meetings", href: "/meetings", icon: CalendarClock },
 ];
 
 const secondaryNav = [
-  { name: "Admin", href: "/admin", icon: Settings },
+  { name: "Admin", href: "/admin", icon: Settings, adminOnly: true },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+
+  let currentUser: { full_name?: string; email?: string; role?: string } | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("user");
+      if (raw) currentUser = JSON.parse(raw);
+    } catch {
+      currentUser = null;
+    }
+  }
+  const isAdmin = currentUser?.role === "admin";
+  const displayName = currentUser?.full_name || currentUser?.email?.split("@")[0] || "User";
+  const initials = displayName
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join("");
+
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem("refresh_token") || undefined;
+    try {
+      await apiClient.logout(refreshToken);
+    } catch {
+      // ignore network errors on logout
+    }
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+    router.push("/login");
+  };
+
+  const visibleSecondaryNav = secondaryNav.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
 
   return (
     <aside
@@ -126,7 +165,7 @@ export function Sidebar() {
         <div className="my-3 border-t" />
 
         <div className="space-y-1">
-          {secondaryNav.map((item) => {
+          {visibleSecondaryNav.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
@@ -152,15 +191,17 @@ export function Sidebar() {
       {/* Footer */}
       <div className="border-t p-3">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">PI</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">{initials || "PI"}</div>
           {!collapsed && (
             <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium">Researcher</p>
-              <p className="truncate text-xs text-muted-foreground">researcher@lab.org</p>
+              <p className="truncate text-sm font-medium">{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {currentUser?.email || "Not signed in"} {isAdmin && <span className="text-primary">· Admin</span>}
+              </p>
             </div>
           )}
           {!collapsed && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
           )}

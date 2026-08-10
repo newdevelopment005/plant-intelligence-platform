@@ -35,6 +35,7 @@ interface Department {
   code: string | null;
   description: string | null;
   head_user_id: string | null;
+  head_user?: { full_name?: string; email?: string } | null;
   is_active: boolean;
   member_count: number;
   created_at: string;
@@ -46,6 +47,7 @@ interface DepartmentMember {
   user_id: string;
   role: string;
   joined_at: string;
+  user?: { full_name?: string; email?: string } | null;
 }
 
 export default function AdminPage() {
@@ -192,7 +194,7 @@ export default function AdminPage() {
     if (!selectedDept) return;
     const userId = (e.target as any).userId.value?.trim();
     const role = (e.target as any).role.value ?? "member";
-    if (!userId) { setError("Enter a user ID or email is not supported - use a user ID"); setTimeout(() => setError(""), 4000); return; }
+    if (!userId) { setError("Select a user to add"); setTimeout(() => setError(""), 4000); return; }
     try {
       await apiClient.addDepartmentMember(selectedDept, { user_id: userId, role });
       await loadDeptMembers(selectedDept);
@@ -236,8 +238,12 @@ export default function AdminPage() {
     }
   };
 
-  const resolveMemberName = (userId: string) =>
-    deptMemberUsers[userId] || users.find((u) => u.id === userId)?.full_name || userId.slice(0, 8);
+  const resolveMemberName = (userId: string, user?: DepartmentMember["user"]) =>
+    user?.full_name ||
+    deptMemberUsers[userId] ||
+    users.find((u) => u.id === userId)?.full_name ||
+    users.find((u) => u.id === userId)?.email ||
+    userId.slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -435,9 +441,20 @@ export default function AdminPage() {
                 <textarea value={deptForm.description} onChange={(e) => setDeptForm({ ...deptForm, description: e.target.value })} rows={2} className="w-full rounded-md border px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Department Head (user ID)</label>
-                <input value={deptForm.head_user_id} onChange={(e) => setDeptForm({ ...deptForm, head_user_id: e.target.value })} placeholder="Optional - user ID" className="w-full rounded-md border px-3 py-2" />
-              </div>
+                  <label className="block text-sm font-medium mb-1">Department Head</label>
+                  <select
+                    value={deptForm.head_user_id}
+                    onChange={(e) => setDeptForm({ ...deptForm, head_user_id: e.target.value })}
+                    className="w-full rounded-md border px-3 py-2"
+                  >
+                    <option value="">No head</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">Create Department</button>
             </form>
           )}
@@ -490,14 +507,26 @@ export default function AdminPage() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="text-lg font-semibold">{departments.find((d) => d.id === selectedDept)?.name}</h3>
+                      <h3 className="text-lg font-semibold">{departments.find((d) => d.id === selectedDept)?.name} {departments.find((d) => d.id === selectedDept)?.code && <span className="text-sm text-muted-foreground">({departments.find((d) => d.id === selectedDept)?.code})</span>}</h3>
                       <p className="text-sm text-muted-foreground">{deptMembers.length} members</p>
+                      {departments.find((d) => d.id === selectedDept)?.head_user?.full_name && (
+                        <p className="text-sm text-muted-foreground">
+                          Head: <span className="text-foreground">{departments.find((d) => d.id === selectedDept)?.head_user?.full_name}</span>
+                        </p>
+                      )}
                     </div>
                     <button onClick={() => { setSelectedDept(null); setDeptMembers([]); }} className="text-sm text-muted-foreground hover:text-gray-900">Back to list</button>
                   </div>
 
-                  <form onSubmit={handleAddDeptMember} className="mb-4 flex gap-2">
-                    <input name="userId" placeholder="User ID" className="flex-1 rounded-md border px-3 py-2 text-sm" />
+                  <form onSubmit={handleAddDeptMember} className="mb-4 flex flex-wrap gap-2">
+                    <select name="userId" required className="flex-1 rounded-md border px-3 py-2 text-sm" defaultValue="">
+                      <option value="" disabled>Select a user...</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name} ({u.email})
+                        </option>
+                      ))}
+                    </select>
                     <select name="role" className="rounded-md border px-3 py-2 text-sm">
                       <option value="member">Member</option>
                       <option value="head">Head</option>
@@ -517,7 +546,12 @@ export default function AdminPage() {
                     <tbody>
                       {deptMembers.map((m) => (
                         <tr key={m.id} className="border-t hover:bg-muted/20">
-                          <td className="px-4 py-3 text-sm font-medium">{resolveMemberName(m.user_id)}</td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {resolveMemberName(m.user_id, m.user)}
+                            {m.user?.email && (
+                              <div className="text-xs font-normal text-muted-foreground">{m.user.email}</div>
+                            )}
+                          </td>
                           <td className="px-4 py-3">
                             <select
                               value={m.role}
