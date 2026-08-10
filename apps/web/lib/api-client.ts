@@ -723,6 +723,13 @@ class ApiClient {
     });
   }
 
+  async adminUpdateUserStatus(userId: string, isActive: boolean) {
+    return this.request<any>(`/admin/users/${userId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ is_active: isActive }),
+    });
+  }
+
   async adminGetAuditLog(params?: Record<string, string>) {
     const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
     return this.request<{ items: any[]; total: number }>(`/admin/audit-log${qs}`);

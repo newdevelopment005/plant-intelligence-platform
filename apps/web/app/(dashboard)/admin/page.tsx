@@ -8,6 +8,8 @@ interface User {
   email: string;
   full_name: string;
   role: string;
+  institution?: string | null;
+  department?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -107,6 +109,17 @@ export default function AdminPage() {
       setUsers(users.map((u) => u.id === userId ? { ...u, role: newRole } : u));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update role");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleStatusChange = async (userId: string, isActive: boolean) => {
+    try {
+      await apiClient.adminUpdateUserStatus(userId, isActive);
+      setUsers(users.map((u) => u.id === userId ? { ...u, is_active: isActive } : u));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update status");
+      setTimeout(() => setError(""), 4000);
     }
   };
 
@@ -252,6 +265,7 @@ export default function AdminPage() {
                 <th className="px-4 py-3 text-left text-sm font-medium">Name</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Email</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Role</th>
+                <th className="px-4 py-3 text-left text-sm font-medium">Institution</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
                 <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
@@ -271,6 +285,10 @@ export default function AdminPage() {
                       <option value="readonly">Read Only</option>
                     </select>
                   </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                    <div>{user.institution || "-"}</div>
+                    {user.department && <div className="text-xs">{user.department}</div>}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-1 text-xs font-medium ${user.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                       {user.is_active ? "Active" : "Inactive"}
@@ -280,12 +298,14 @@ export default function AdminPage() {
                     {new Date(user.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <button
-                      onClick={() => handleRoleChange(user.id, user.role)}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Update
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleStatusChange(user.id, !user.is_active)}
+                        className={user.is_active ? "text-red-600 hover:underline" : "text-green-600 hover:underline"}
+                      >
+                        {user.is_active ? "Deactivate" : "Activate"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
