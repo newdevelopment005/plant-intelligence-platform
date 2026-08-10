@@ -74,7 +74,8 @@ class CreateReportUseCase:
         valid_types = (
             "phenotyping", "genotyping", "germplasm", "experiment",
             "project_summary", "custom", "statistical", "comparative",
-            "temporal", "geospatial",
+            "temporal", "geospatial", "summary", "genomics",
+            "literature", "project",
         )
         if report_type not in valid_types:
             raise ValidationException(f"Invalid report type. Must be one of: {', '.join(valid_types)}")
