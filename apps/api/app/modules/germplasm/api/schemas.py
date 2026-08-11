@@ -57,6 +57,7 @@ class UpdateAccessionRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=255)
     description: str | None = Field(None, max_length=5000)
     collection_source: str | None = Field(None, max_length=255)
+    collection_location: str | None = Field(None, max_length=255)
     availability_status: str | None = Field(None, pattern="^(available|limited|unavailable|reserved)$")
     tags: list[str] | None = Field(None, max_length=20)
 

@@ -202,7 +202,7 @@ export default function AccessionDetailPage() {
             {editing ? (
               <form onSubmit={handleUpdate} className="space-y-3">
                 <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-2xl font-bold" placeholder="Name" />
-                <input type="text" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Description" />
+                <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" rows={3} placeholder="Description" />
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" value={editForm.collection_source} onChange={(e) => setEditForm({ ...editForm, collection_source: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Collection source" />
                   <input type="text" value={editForm.collection_location} onChange={(e) => setEditForm({ ...editForm, collection_location: e.target.value })} className="block w-full rounded-md border px-3 py-2 text-sm" placeholder="Collection location" />
@@ -211,6 +211,7 @@ export default function AccessionDetailPage() {
                   <option value="available">Available</option>
                   <option value="limited">Limited</option>
                   <option value="unavailable">Unavailable</option>
+                  <option value="reserved">Reserved</option>
                 </select>
                 <div className="flex gap-2">
                   <button type="submit" className="text-sm text-green-600 hover:underline">Save</button>

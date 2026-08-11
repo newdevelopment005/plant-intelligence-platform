@@ -294,6 +294,7 @@ class UpdateAccessionUseCase:
         name: str | None = None,
         description: str | None = None,
         collection_source: str | None = None,
+        collection_location: str | None = None,
         availability_status: str | None = None,
         tags: list[str] | None = None,
     ) -> AccessionModel:
@@ -312,6 +313,8 @@ class UpdateAccessionUseCase:
             accession.description = description.strip() if description else None
         if collection_source is not None:
             accession.collection_source = collection_source.strip() if collection_source else None
+        if collection_location is not None:
+            accession.collection_location = collection_location.strip() if collection_location else None
         if availability_status is not None:
             if availability_status not in ("available", "limited", "unavailable", "reserved"):
                 raise ValidationException("Invalid availability status")

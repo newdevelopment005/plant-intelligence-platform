@@ -267,7 +267,7 @@ async def get_accession(
         "description": accession.description,
         "collection_source": accession.collection_source,
         "collection_date": accession.collection_date.isoformat() if accession.collection_date else None,
-        "collection_location": accession.collection地点,
+        "collection_location": accession.collection_location,
         "latitude": accession.latitude,
         "longitude": accession.longitude,
         "altitude": accession.altitude,
@@ -295,6 +295,7 @@ async def update_accession(
         name=body.name,
         description=body.description,
         collection_source=body.collection_source,
+        collection_location=body.collection_location,
         availability_status=body.availability_status,
         tags=body.tags,
     )

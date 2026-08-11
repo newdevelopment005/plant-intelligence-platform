@@ -321,6 +321,72 @@ export default function AccessionsPage() {
         </div>
       )}
 
+      {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Edit Accession</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium">Accession Number</label>
+                <input
+                  type="text"
+                  disabled
+                  value={accessions.find((a) => a.id === editingId)?.accession_number || ""}
+                  className="mt-1 block w-full rounded-md border bg-gray-100 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Availability Status</label>
+                <select
+                  value={editForm.availability_status}
+                  onChange={(e) => setEditForm({ ...editForm, availability_status: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                >
+                  <option value="available">Available</option>
+                  <option value="limited">Limited</option>
+                  <option value="unavailable">Unavailable</option>
+                  <option value="reserved">Reserved</option>
+                </select>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="rounded-md border px-4 py-2 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
@@ -351,25 +417,12 @@ export default function AccessionsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {editingId === a.id ? (
-                      <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
-                    ) : (
-                      a.name
-                    )}
+                    {a.name}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {editingId === a.id ? (
-                      <select value={editForm.availability_status} onChange={(e) => setEditForm({ ...editForm, availability_status: e.target.value })} className="w-full rounded border px-2 py-1 text-sm">
-                        <option value="available">Available</option>
-                        <option value="limited">Limited</option>
-                        <option value="unavailable">Unavailable</option>
-                        <option value="reserved">Reserved</option>
-                      </select>
-                    ) : (
-                      <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[a.availability_status] || ""}`}>
-                        {a.availability_status}
-                      </span>
-                    )}
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${statusColors[a.availability_status] || ""}`}>
+                      {a.availability_status}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {a.latitude && a.longitude ? `${a.latitude.toFixed(2)}, ${a.longitude.toFixed(2)}` : "-"}
@@ -378,19 +431,10 @@ export default function AccessionsPage() {
                     {new Date(a.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    {editingId === a.id ? (
-                      <form onSubmit={handleUpdate} className="contents">
-                        <div className="flex gap-2">
-                          <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
-                          <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
-                        </div>
-                      </form>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button onClick={() => startEdit(a)} className="text-xs text-blue-600 hover:underline">Edit</button>
-                        <button onClick={() => handleDelete(a.id)} className="text-xs text-red-600 hover:underline">Delete</button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(a)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                      <button onClick={() => handleDelete(a.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                    </div>
                   </td>
                 </tr>
               ))}

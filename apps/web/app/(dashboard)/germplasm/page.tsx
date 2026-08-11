@@ -230,6 +230,71 @@ export default function GermplasmPage() {
             </div>
           )}
 
+          {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Edit Species</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium">Common Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.common_name}
+                  onChange={(e) => setEditForm({ ...editForm, common_name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Scientific Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.scientific_name}
+                  onChange={(e) => setEditForm({ ...editForm, scientific_name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2 italic"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium">Family</label>
+                  <input
+                    type="text"
+                    value={editForm.family}
+                    onChange={(e) => setEditForm({ ...editForm, family: e.target.value })}
+                    className="mt-1 block w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Genus</label>
+                  <input
+                    type="text"
+                    value={editForm.genus}
+                    onChange={(e) => setEditForm({ ...editForm, genus: e.target.value })}
+                    className="mt-1 block w-full rounded-md border px-3 py-2"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="rounded-md border px-4 py-2 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
@@ -254,47 +319,19 @@ export default function GermplasmPage() {
                 <tbody>
                   {species.map((s) => (
                     <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50">
-                      {editingId === s.id ? (
-                        <form onSubmit={handleUpdate} className="contents">
-                          <td className="px-4 py-3">
-                            <input type="text" value={editForm.common_name} onChange={(e) => setEditForm({ ...editForm, common_name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
-                          </td>
-                          <td className="px-4 py-3">
-                            <input type="text" value={editForm.scientific_name} onChange={(e) => setEditForm({ ...editForm, scientific_name: e.target.value })} className="w-full rounded border px-2 py-1 text-sm italic" />
-                          </td>
-                          <td className="px-4 py-3">
-                            <input type="text" value={editForm.family} onChange={(e) => setEditForm({ ...editForm, family: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
-                          </td>
-                          <td className="px-4 py-3">
-                            <input type="text" value={editForm.genus} onChange={(e) => setEditForm({ ...editForm, genus: e.target.value })} className="w-full rounded border px-2 py-1 text-sm" />
-                          </td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
-                            {new Date(s.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2">
-                              <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
-                              <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
-                            </div>
-                          </td>
-                        </form>
-                      ) : (
-                        <>
-                          <td className="px-4 py-3 text-sm font-medium">{s.common_name}</td>
-                          <td className="px-4 py-3 text-sm italic text-muted-foreground">{s.scientific_name}</td>
-                          <td className="px-4 py-3 text-sm">{s.family || "-"}</td>
-                          <td className="px-4 py-3 text-sm">{s.genus || "-"}</td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">
-                            {new Date(s.created_at).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2">
-                              <button onClick={() => startEdit(s)} className="text-xs text-blue-600 hover:underline">Edit</button>
-                              <button onClick={() => handleDelete(s.id)} className="text-xs text-red-600 hover:underline">Delete</button>
-                            </div>
-                          </td>
-                        </>
-                      )}
+                      <td className="px-4 py-3 text-sm font-medium">{s.common_name}</td>
+                      <td className="px-4 py-3 text-sm italic text-muted-foreground">{s.scientific_name}</td>
+                      <td className="px-4 py-3 text-sm">{s.family || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{s.genus || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {new Date(s.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => startEdit(s)} className="text-xs text-blue-600 hover:underline">Edit</button>
+                          <button onClick={() => handleDelete(s.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
