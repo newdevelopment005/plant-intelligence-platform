@@ -3,7 +3,11 @@ from datetime import UTC, datetime, timedelta
 
 from app.config import settings
 from app.core.exceptions import AppException
-from app.core.security import create_access_token, decode_token
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+)
 from app.modules.auth.domain.interfaces import UserRepositoryInterface
 from app.modules.auth.domain.token_interfaces import TokenRepositoryInterface
 
@@ -55,7 +59,7 @@ class RefreshTokenUseCase:
 
         token_data = {"sub": str(user.id), "email": user.email, "role": user.role}
         new_access_token = create_access_token(token_data)
-        new_refresh_token = create_access_token(token_data)
+        new_refresh_token = create_refresh_token(token_data)
 
         from app.modules.auth.domain.token_model import RefreshTokenModel
 

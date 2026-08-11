@@ -20,10 +20,15 @@ export default function AIAssistantPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -32,6 +37,9 @@ export default function AIAssistantPage() {
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const token =
@@ -56,6 +64,7 @@ export default function AIAssistantPage() {
           ],
           stream: true,
         }),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -98,6 +107,16 @@ export default function AIAssistantPage() {
         }
       }
     } catch (err: any) {
+      if (err?.name === "AbortError") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "Response stopped.",
+          },
+        ]);
+        return;
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -107,7 +126,12 @@ export default function AIAssistantPage() {
       ]);
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
+  };
+
+  const stopGeneration = () => {
+    abortRef.current?.abort();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -168,6 +192,11 @@ export default function AIAssistantPage() {
           <Button onClick={sendMessage} disabled={loading || !input.trim()} className="self-end">
             Send
           </Button>
+          {loading && (
+            <Button variant="outline" onClick={stopGeneration} className="self-end">
+              Stop
+            </Button>
+          )}
         </div>
       </div>
     </div>

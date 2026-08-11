@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL =
-  (process.env.BACKEND_URL || "https://uniquely-buggy-whomever.ngrok-free.dev").replace(/\/$/, "");
+const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:8000").replace(/\/$/, "");
 
 async function proxyRequest(request: NextRequest, path: string) {
   const url = `${BACKEND_URL}/ai-proxy/${path}`;

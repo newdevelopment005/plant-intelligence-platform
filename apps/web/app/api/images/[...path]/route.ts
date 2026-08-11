@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +9,17 @@ export async function GET(
   const { path } = await params;
   const filePath = path.join("/");
 
+  const headers: Record<string, string> = {
+    "ngrok-skip-browser-warning": "true",
+  };
+  const auth = request.headers.get("authorization");
+  if (auth) {
+    headers["Authorization"] = auth;
+  }
+
   try {
     const backendResponse = await fetch(`${BACKEND_URL}/${filePath}`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
+      headers,
     });
 
     if (!backendResponse.ok) {

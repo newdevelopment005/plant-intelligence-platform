@@ -39,8 +39,10 @@ export default function Login() {
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("refresh_token", data.refresh_token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      document.cookie = "pip_session=1; path=/; SameSite=Lax";
 
-      router.push("/dashboard");
+      const from = new URLSearchParams(window.location.search).get("from");
+      router.push(from || "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

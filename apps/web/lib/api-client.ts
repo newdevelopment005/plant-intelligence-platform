@@ -30,6 +30,7 @@ interface UserInfo {
 
 class ApiClient {
   private baseUrl: string;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
@@ -41,8 +42,31 @@ class ApiClient {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
+  private forceLogout(): void {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+    document.cookie = "pip_session=; path=/; Max-Age=0; SameSite=Lax";
+    if (window.location.pathname !== "/login") {
+      window.location.href = "/login";
+    }
+  }
+
   private async tryRefreshToken(): Promise<boolean> {
     if (typeof window === "undefined") return false;
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = this.refreshAndStore()
+      .catch(() => false)
+      .finally(() => {
+        this.refreshPromise = null;
+      });
+
+    return this.refreshPromise;
+  }
+
+  private async refreshAndStore(): Promise<boolean> {
     const refreshToken = localStorage.getItem("refresh_token");
     if (!refreshToken) return false;
     try {
@@ -84,6 +108,8 @@ class ApiClient {
       if (refreshed) {
         return this.request<T>(endpoint, options, true);
       }
+      this.forceLogout();
+      throw new Error("Your session has expired. Please sign in again.");
     }
 
     if (!response.ok) {

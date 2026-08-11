@@ -8,6 +8,12 @@ celery_app = Celery(
     backend=settings.REDIS_URL,
     include=[
         "app.modules.auth.tasks",
+        "app.modules.meeting.tasks",
+        "app.modules.literature.tasks",
+        "app.modules.image_analysis.tasks",
+        "app.modules.knowledge_graph.tasks",
+        "app.modules.genomics.tasks",
+        "app.modules.reporting.tasks",
     ],
 )
 
@@ -21,10 +27,19 @@ celery_app.conf.update(
     task_time_limit=3600,
     task_soft_time_limit=3000,
     worker_prefetch_multiplier=1,
+    worker_max_tasks_per_child=100,
+    task_routes={
+        "app.modules.ai.*": {"queue": "ai"},
+        "app.modules.high_priority.*": {"queue": "high_priority"},
+    },
     beat_schedule={
         "cleanup-expired-tokens": {
             "task": "app.modules.auth.tasks.cleanup_expired_tokens",
-            "schedule": 86400.0,
+            "schedule": 3600.0,
+        },
+        "send-meeting-reminders": {
+            "task": "app.modules.meeting.tasks.send_meeting_reminders",
+            "schedule": 60.0,
         },
     },
 )

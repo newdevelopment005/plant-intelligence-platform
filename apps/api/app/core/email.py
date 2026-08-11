@@ -114,6 +114,32 @@ def send_team_invite_email(
     )
 
 
+def send_password_reset(
+    to_email: str,
+    reset_token: str,
+    base_url: str,
+) -> bool:
+    reset_url = f"{base_url}/reset-password?token={reset_token}"
+    return send_email(
+        to_email,
+        subject="Reset your password",
+        html=(
+            "<p>Hi,</p>"
+            "<p>We received a request to reset your password for the "
+            "Plant Intelligence Platform. Click the link below to set a new one. "
+            "The link expires in 1 hour.</p>"
+            f'<p><a href="{reset_url}">Reset your password</a></p>'
+            f"<p>If the button doesn't work, copy and paste this URL into your browser:</p>"
+            f"<p>{reset_url}</p>"
+            "<p>If you didn't request this, you can safely ignore this email.</p>"
+        ),
+        text=(
+            f"Reset your password by visiting: {reset_url} "
+            "(expires in 1 hour). If you didn't request this, ignore this email."
+        ),
+    )
+
+
 def send_meeting_reminder(
     to_email: str,
     meeting_title: str,

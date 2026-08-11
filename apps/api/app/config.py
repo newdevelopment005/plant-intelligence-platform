@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -50,10 +51,37 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@pip-platform.org"
 
+    def validate_production(self) -> None:
+        """Fail fast in production when anyone relies on default secrets.
+
+        This prevents a deployment with forgeable JWTs or an unset database
+        from starting silently.
+        """
+        if self.ENVIRONMENT.lower() != "production":
+            return
+
+        problems: list[str] = []
+        jwt_default = "change-me-use-openssl-rand-hex-32"
+        if not self.JWT_SECRET_KEY or self.JWT_SECRET_KEY == jwt_default:
+            problems.append("JWT_SECRET_KEY must be set to a strong random value in production")
+        db_default = "pip:password@localhost"
+        if db_default in self.DATABASE_URL:
+            problems.append("DATABASE_URL still points at the default local database")
+        if not os.getenv("JWT_SECRET_KEY") and os.getenv("ENVIRONMENT", "").lower() == "production":
+            problems.append("JWT_SECRET_KEY must come from the environment in production")
+
+        if problems:
+            raise RuntimeError(
+                "Refusing to start in production with insecure defaults: "
+                + "; ".join(problems)
+            )
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    settings.validate_production()
+    return settings
 
 
 settings = get_settings()

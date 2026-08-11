@@ -1,14 +1,15 @@
 import json
-import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import httpx
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from app.config import settings
+from app.core.dependencies import get_current_active_user
 from app.core.exceptions import register_exception_handlers
 from app.core.health import router as health_router
 from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware
@@ -127,16 +128,33 @@ def create_app() -> FastAPI:
 
     @application.get("/storage/{file_path:path}")
     async def serve_storage(file_path: str):
-        """Serve static files from the storage directory."""
-        full_path = os.path.join(settings.STORAGE_LOCAL_PATH, file_path)
-        if os.path.isfile(full_path):
-            return FileResponse(full_path)
+        """Serve static files from the storage directory.
+
+        Guards against path traversal so callers can only read files under the
+        configured storage root. Intentionally public so public/link-shared
+        images can be viewed without credentials.
+        """
+        root = Path(settings.STORAGE_LOCAL_PATH).resolve()
+        candidate = (root / file_path).resolve()
+        if root not in candidate.parents and candidate != root:
+            return Response(status_code=403, content="Forbidden")
+        if candidate.is_file():
+            return FileResponse(candidate)
         return Response(status_code=404, content="File not found")
 
     @application.api_route("/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
     @application.api_route("/api/v1/ai-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-    async def ai_proxy(path: str, request: Request):
-        """Proxy requests to Ollama or AI microservice."""
+    async def ai_proxy(
+        path: str,
+        request: Request,
+        current_user: dict = Depends(get_current_active_user),
+    ):
+        """Proxy requests to Ollama or the AI microservice.
+
+        Authenticated only. The caller's Authorization header is deliberately
+        NOT forwarded to the upstream AI service, and error details are logged
+        server-side rather than leaked to the client.
+        """
         if request.method == "OPTIONS":
             return Response(status_code=204, headers={
                 "Access-Control-Allow-Origin": "*",
@@ -147,10 +165,17 @@ def create_app() -> FastAPI:
         ollama_url = settings.OLLAMA_BASE_URL.rstrip("/")
         try:
             client = httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0))
+            upstream_headers = {
+                k: v
+                for k, v in request.headers.items()
+                if k.lower() not in ("host", "authorization", "cookie", "proxy-authorization")
+            }
+            if request.headers.get("content-type"):
+                upstream_headers["Content-Type"] = request.headers["content-type"]
             req = client.build_request(
                 method=request.method,
                 url=f"{ollama_url}/{path}",
-                headers={k: v for k, v in request.headers.items() if k.lower() not in ("host",)},
+                headers=upstream_headers,
                 content=body,
             )
             resp = await client.send(req, stream=True)
@@ -175,9 +200,9 @@ def create_app() -> FastAPI:
                 },
             )
         except Exception as e:
-            logger.error("ai_proxy_error", error=str(e))
+            logger.error("ai_proxy_error", error=str(e), path=path, user_id=current_user.get("id"))
             return Response(
-                content=json.dumps({"error": str(e)}).encode(),
+                content=json.dumps({"error": "AI service unavailable"}).encode(),
                 status_code=502,
                 headers={"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
             )

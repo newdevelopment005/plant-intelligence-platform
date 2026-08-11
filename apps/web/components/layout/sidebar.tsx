@@ -88,6 +88,7 @@ export function Sidebar() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
+    document.cookie = "pip_session=; path=/; Max-Age=0; SameSite=Lax";
     router.push("/login");
   };
 
