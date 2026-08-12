@@ -20,6 +20,7 @@ interface UserInfo {
   role: string;
   institution?: string;
   department?: string;
+  department_id?: string | null;
   is_active: boolean;
   is_verified: boolean;
   orcid_id?: string;
@@ -781,7 +782,16 @@ class ApiClient {
   // =============================================
   // Sharing
   // =============================================
-  async shareItem(data: { item_type: string; item_id: string; visibility: string; user_ids?: string[]; emails?: string[]; permission?: string }) {
+  async shareItem(data: {
+    item_type: string;
+    item_id: string;
+    visibility: string;
+    user_ids?: string[];
+    emails?: string[];
+    team_ids?: string[];
+    department_ids?: string[];
+    permission?: string;
+  }) {
     return this.request<any>("/sharing/share", {
       method: "POST",
       body: JSON.stringify(data),
@@ -803,7 +813,7 @@ class ApiClient {
   // =============================================
   // Teams
   // =============================================
-  async createTeam(data: { name: string; description?: string }) {
+  async createTeam(data: { name: string; description?: string; department_id?: string; parent_id?: string }) {
     return this.request<any>("/teams", {
       method: "POST",
       body: JSON.stringify(data),
@@ -840,6 +850,20 @@ class ApiClient {
 
   async deleteTeam(teamId: string) {
     return this.request<void>(`/teams/${teamId}`, { method: "DELETE" });
+  }
+
+  async adminListTeams(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/admin/teams${qs}`);
+  }
+
+  async adminListDepartments(params?: Record<string, string>) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+    return this.request<{ items: any[]; total: number }>(`/admin/departments${qs}`);
+  }
+
+  async adminDeleteTeam(teamId: string) {
+    return this.request<any>(`/admin/teams/${teamId}`, { method: "DELETE" });
   }
 
   // =============================================

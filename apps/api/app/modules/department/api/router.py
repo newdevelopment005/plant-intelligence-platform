@@ -2,7 +2,11 @@ import structlog
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_active_user, require_admin
+from app.core.dependencies import (
+    get_current_active_user,
+    require_admin,
+    require_admin_or_department_head,
+)
 from app.database import get_db
 from app.modules.department.api.schemas import (
     AddDepartmentMemberRequest,
@@ -138,6 +142,9 @@ async def create_department(
     current_user: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.modules.auth.domain.models import UserModel
+    from sqlalchemy import select as _select
+
     repo = _get_department_repo(db)
     member_repo = _get_member_repo(db)
     use_case = CreateDepartmentUseCase(repo, member_repo)
@@ -148,6 +155,16 @@ async def create_department(
         description=body.description,
         head_user_id=body.head_user_id,
     )
+    if body.head_user_id:
+        user_result = await db.execute(
+            _select(UserModel).where(UserModel.id == body.head_user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if user:
+            user.department_id = department.id
+            if not user.department:
+                user.department = department.name
+            await db.flush()
     logger.info("department_created", department_id=str(department.id), user_id=current_user["id"])
     result = _department_to_dict(department)
     members = await member_repo.list_members(str(department.id))
@@ -162,6 +179,9 @@ async def update_department(
     current_user: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.modules.auth.domain.models import UserModel
+    from sqlalchemy import select as _select
+
     repo = _get_department_repo(db)
     member_repo = _get_member_repo(db)
     use_case = UpdateDepartmentUseCase(repo, member_repo)
@@ -173,6 +193,16 @@ async def update_department(
         head_user_id=body.head_user_id,
         is_active=body.is_active,
     )
+    if body.head_user_id is not None and body.head_user_id:
+        user_result = await db.execute(
+            _select(UserModel).where(UserModel.id == body.head_user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if user:
+            user.department_id = department_id
+            if not user.department:
+                user.department = department.name
+            await db.flush()
     result = _department_to_dict(department)
     members = await member_repo.list_members(department_id)
     result["member_count"] = len(members)
@@ -221,9 +251,12 @@ async def get_department(
 async def add_member(
     department_id: str,
     body: AddDepartmentMemberRequest,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_admin_or_department_head),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.modules.auth.domain.models import UserModel
+    from sqlalchemy import select as _select
+
     repo = _get_department_repo(db)
     member_repo = _get_member_repo(db)
     use_case = AddDepartmentMemberUseCase(repo, member_repo)
@@ -232,6 +265,15 @@ async def add_member(
         target_user_id=body.user_id,
         role=body.role,
     )
+    user_result = await db.execute(
+        _select(UserModel).where(UserModel.id == body.user_id)
+    )
+    user = user_result.scalar_one_or_none()
+    if user:
+        user.department_id = department_id
+        if not user.department:
+            user.department = (await repo.get_by_id(department_id)).name
+        await db.flush()
     return _member_to_dict(member, await _user_summary(db, str(member.user_id)))
 
 
@@ -240,7 +282,7 @@ async def update_member_role(
     department_id: str,
     target_user_id: str,
     body: UpdateDepartmentMemberRoleRequest,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_admin_or_department_head),
     db: AsyncSession = Depends(get_db),
 ):
     repo = _get_department_repo(db)
@@ -258,13 +300,24 @@ async def update_member_role(
 async def remove_member(
     department_id: str,
     target_user_id: str,
-    current_user: dict = Depends(require_admin),
+    current_user: dict = Depends(require_admin_or_department_head),
     db: AsyncSession = Depends(get_db),
 ):
+    from app.modules.auth.domain.models import UserModel
+    from sqlalchemy import select as _select
+
     repo = _get_department_repo(db)
     member_repo = _get_member_repo(db)
     use_case = RemoveDepartmentMemberUseCase(repo, member_repo)
-    return await use_case.execute(
+    result = await use_case.execute(
         department_id=department_id,
         target_user_id=target_user_id,
     )
+    user_result = await db.execute(
+        _select(UserModel).where(UserModel.id == target_user_id)
+    )
+    user = user_result.scalar_one_or_none()
+    if user and str(user.department_id) == department_id:
+        user.department_id = None
+        await db.flush()
+    return result

@@ -22,13 +22,26 @@ class CreateTeamUseCase:
         name: str,
         owner_id: str,
         description: str | None = None,
+        department_id: str | None = None,
+        parent_id: str | None = None,
     ) -> TeamModel:
         self._validate_name(name)
+
+        if parent_id:
+            parent = await self.team_repo.get_by_id(parent_id)
+            if not parent:
+                raise NotFoundException("Team", parent_id)
+            if department_id is None:
+                department_id = parent.department_id
+            if str(parent.id) == str(parent_id):
+                pass
 
         team = TeamModel(
             name=name.strip(),
             description=description.strip() if description else None,
             owner_id=owner_id,
+            department_id=department_id,
+            parent_id=parent_id,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
@@ -82,6 +95,8 @@ class ListTeamsUseCase:
                     "name": team.name,
                     "description": team.description,
                     "owner_id": str(team.owner_id),
+                    "department_id": str(team.department_id) if team.department_id else None,
+                    "parent_id": str(team.parent_id) if team.parent_id else None,
                     "member_count": len(members),
                     "created_at": team.created_at.isoformat(),
                     "updated_at": team.updated_at.isoformat(),
@@ -135,11 +150,30 @@ class GetTeamUseCase:
             "name": team.name,
             "description": team.description,
             "owner_id": str(team.owner_id),
+            "department_id": str(team.department_id) if team.department_id else None,
+            "parent_id": str(team.parent_id) if team.parent_id else None,
+            "subteams": await self._subteam_summaries(team_id),
             "members": member_list,
             "member_count": len(member_list),
             "created_at": team.created_at.isoformat(),
             "updated_at": team.updated_at.isoformat(),
         }
+
+    async def _subteam_summaries(self, parent_id: str) -> list[dict]:
+        subteams = await self.team_repo.list_subteams(parent_id)
+        result = []
+        for st in subteams:
+            members = await self.member_repo.list_members(str(st.id))
+            result.append(
+                {
+                    "id": str(st.id),
+                    "name": st.name,
+                    "department_id": str(st.department_id) if st.department_id else None,
+                    "parent_id": str(st.parent_id) if st.parent_id else None,
+                    "member_count": len(members),
+                }
+            )
+        return result
 
 
 class AddTeamMemberUseCase:

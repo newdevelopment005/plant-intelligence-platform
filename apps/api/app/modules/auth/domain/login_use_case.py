@@ -63,5 +63,7 @@ class LoginUseCase:
                 "full_name": user.full_name,
                 "role": user.role,
                 "institution": user.institution,
+                "department": user.department,
+                "department_id": str(user.department_id) if user.department_id else None,
             },
         }

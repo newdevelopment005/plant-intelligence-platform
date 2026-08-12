@@ -43,3 +43,11 @@ class TeamRepository(TeamRepositoryInterface):
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def list_subteams(self, parent_id: str) -> list[TeamModel]:
+        result = await self.db.execute(
+            select(TeamModel)
+            .where(TeamModel.parent_id == parent_id)
+            .order_by(TeamModel.created_at.asc())
+        )
+        return list(result.scalars().all())

@@ -30,6 +30,10 @@ export default function SharedPage() {
   const [sharePermission, setSharePermission] = useState("read");
   const [shareUserId, setShareUserId] = useState("");
   const [shareEmails, setShareEmails] = useState("");
+  const [shareTeamId, setShareTeamId] = useState("");
+  const [shareDeptId, setShareDeptId] = useState("");
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
@@ -38,7 +42,22 @@ export default function SharedPage() {
   useEffect(() => {
     loadSharedWithMe();
     loadMyShares();
+    loadTeamsAndDepartments();
   }, []);
+
+  const loadTeamsAndDepartments = async () => {
+    try {
+      const [teamData, deptData] = await Promise.all([
+        apiClient.listTeams(),
+        apiClient.listDepartments(),
+      ]);
+      setTeams((teamData?.items ?? []).map((t: any) => ({ id: t.id, name: t.name })));
+      setDepartments((deptData?.items ?? []).map((d: any) => ({ id: d.id, name: d.name })));
+    } catch {
+      setTeams([]);
+      setDepartments([]);
+    }
+  };
 
   const loadSharedWithMe = async () => {
     setLoadingShared(true);
@@ -128,12 +147,20 @@ export default function SharedPage() {
           .map((s) => s.trim())
           .filter(Boolean);
       }
+      if (shareTeamId) {
+        payload.team_ids = [shareTeamId];
+      }
+      if (shareDeptId) {
+        payload.department_ids = [shareDeptId];
+      }
       await apiClient.shareItem(payload);
       setSuccess("Item shared successfully");
       setShowShareForm(false);
       setShareItemId("");
       setShareUserId("");
       setShareEmails("");
+      setShareTeamId("");
+      setShareDeptId("");
       setUserSearchQuery("");
       setUserSearchResults([]);
       loadMyShares();
@@ -315,6 +342,28 @@ export default function SharedPage() {
               <p className="mt-1 text-xs text-muted-foreground">
                 Invites are emailed to registered addresses; unregistered ones receive a sign-up notice.
               </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Share with Team (optional)</label>
+                <select value={shareTeamId} onChange={(e) => setShareTeamId(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <option value="">No team</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">All team members get access.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Share with Department (optional)</label>
+                <select value={shareDeptId} onChange={(e) => setShareDeptId(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                  <option value="">No department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">All department members get access.</p>
+              </div>
             </div>
             <div className="flex gap-2 justify-end">
               <button type="button" onClick={() => setShowShareForm(false)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Cancel</button>

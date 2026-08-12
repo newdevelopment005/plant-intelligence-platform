@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -90,3 +90,36 @@ async def require_pi_or_admin(
             detail="Principal Investigator or Admin privileges required",
         )
     return current_user
+
+
+async def require_not_readonly(
+    current_user: Annotated[dict, Depends(get_current_active_user)],
+    request: Request,
+) -> dict:
+    if current_user.get("role") == "readonly" and request.method != "GET":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Read-only users cannot modify data",
+        )
+    return current_user
+
+
+async def require_admin_or_department_head(
+    department_id: str,
+    current_user: Annotated[dict, Depends(get_current_active_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    if current_user.get("role") == "admin":
+        return current_user
+
+    if current_user.get("role") == "principal_investigator":
+        from app.modules.department.infrastructure.repositories import DepartmentRepository
+
+        department = await DepartmentRepository(db).get_by_id(department_id)
+        if department and department.head_user_id and str(department.head_user_id) == current_user["id"]:
+            return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin or department head privileges required",
+    )

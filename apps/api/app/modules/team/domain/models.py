@@ -28,6 +28,18 @@ class TeamModel(Base):
         nullable=False,
         index=True,
     )
+    department_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("org.departments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("team.teams.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -42,6 +54,12 @@ class TeamModel(Base):
 
     members: Mapped[list["TeamMemberModel"]] = relationship(
         back_populates="team", cascade="all, delete-orphan"
+    )
+    parent: Mapped["TeamModel | None"] = relationship(
+        back_populates="subteams", remote_side="TeamModel.id"
+    )
+    subteams: Mapped[list["TeamModel"]] = relationship(
+        back_populates="parent", cascade="all, delete-orphan"
     )
 
 

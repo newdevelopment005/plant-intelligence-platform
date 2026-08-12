@@ -1,7 +1,7 @@
 import uuid as _uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.sharing.domain.interfaces import ShareRecipientRepositoryInterface, ShareRepositoryInterface
@@ -69,13 +69,48 @@ class ShareRecipientRepository(ShareRecipientRepositoryInterface):
         )
         return list(result.scalars().all())
 
-    async def list_shared_with_user(self, user_id: str) -> list[ShareRecipientModel]:
-        result = await self.db.execute(
-            select(ShareRecipientModel)
-            .where(ShareRecipientModel.user_id == user_id)
-            .order_by(ShareRecipientModel.shared_at.desc())
-        )
+    async def list_shared_with_user(
+        self,
+        user_id: str,
+        team_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
+    ) -> list[ShareRecipientModel]:
+        stmt = select(ShareRecipientModel).order_by(ShareRecipientModel.shared_at.desc())
+        conditions = [
+            ShareRecipientModel.recipient_type == "user",
+            ShareRecipientModel.user_id == user_id,
+        ]
+        if team_ids:
+            conditions.append(
+                (ShareRecipientModel.recipient_type == "team")
+                & ShareRecipientModel.team_id.in_(team_ids)
+            )
+        if department_ids:
+            conditions.append(
+                (ShareRecipientModel.recipient_type == "department")
+                & ShareRecipientModel.department_id.in_(department_ids)
+            )
+        result = await self.db.execute(stmt.where(or_(*conditions)))
         return list(result.scalars().all())
+
+    async def list_user_memberships(self, user_id: str) -> dict:
+        from app.modules.auth.domain.models import UserModel
+        from app.modules.team.domain.models import TeamMemberModel
+
+        team_result = await self.db.execute(
+            select(TeamMemberModel.team_id).where(TeamMemberModel.user_id == user_id)
+        )
+        team_ids = [str(t) for t in team_result.scalars().all()]
+
+        user_result = await self.db.execute(
+            select(UserModel.department_id).where(UserModel.id == user_id)
+        )
+        department_id = user_result.scalar_one_or_none()
+
+        return {
+            "team_ids": team_ids,
+            "department_ids": [str(department_id)] if department_id else [],
+        }
 
     async def delete_by_share(self, share_id: str) -> bool:
         result = await self.db.execute(

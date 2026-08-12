@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_not_readonly
 from app.database import get_db
 from app.modules.sharing.api.schemas import (
     CreateShareRequest,
@@ -38,7 +38,10 @@ def _share_to_dict(share) -> dict:
 def _recipient_to_dict(recipient, user: dict | None = None) -> dict:
     result = {
         "id": str(recipient.id),
-        "user_id": str(recipient.user_id),
+        "recipient_type": recipient.recipient_type,
+        "user_id": str(recipient.user_id) if recipient.user_id else None,
+        "team_id": str(recipient.team_id) if recipient.team_id else None,
+        "department_id": str(recipient.department_id) if recipient.department_id else None,
         "permission": recipient.permission,
         "shared_at": recipient.shared_at.isoformat(),
     }
@@ -82,7 +85,7 @@ async def _resolve_emails_to_user_ids(db: AsyncSession, emails: list[str] | None
 @router.post("/share", response_model=ShareResponse, status_code=status.HTTP_201_CREATED)
 async def share_item(
     request: CreateShareRequest,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_not_readonly),
     db: AsyncSession = Depends(get_db),
 ):
     from app.modules.sharing.infrastructure.repositories import ShareRecipientRepository, ShareRepository
@@ -103,12 +106,17 @@ async def share_item(
         owner_id=current_user["id"],
         visibility=request.visibility,
         user_ids=all_user_ids,
+        team_ids=request.team_ids,
+        department_ids=request.department_ids,
         permission=request.permission,
     )
     share_dict = _share_to_dict(result["share"])
-    recipient_ids = [str(r.user_id) for r in result["recipients"]]
+    recipient_ids = [str(r.user_id) for r in result["recipients"] if r.user_id]
     users = await _users_by_ids(db, recipient_ids)
-    share_dict["recipients"] = [_recipient_to_dict(r, users.get(str(r.user_id))) for r in result["recipients"]]
+    share_dict["recipients"] = [
+        _recipient_to_dict(r, users.get(str(r.user_id)) if r.user_id else None)
+        for r in result["recipients"]
+    ]
 
     for r in result["recipients"]:
         user = users.get(str(r.user_id))
@@ -140,14 +148,17 @@ async def list_shared_with_me(
     recipient_repo = ShareRecipientRepository(db)
     uc = ListSharedWithMeUseCase(share_repo=share_repo, recipient_repo=recipient_repo)
     results = await uc.execute(user_id=current_user["id"])
-    user_ids = [str(item["recipient"].user_id) for item in results]
+    user_ids = [str(item["recipient"].user_id) for item in results if item["recipient"].user_id]
     users = await _users_by_ids(db, user_ids)
     owner_ids = [str(item["share"].owner_id) for item in results]
     owners = await _users_by_ids(db, owner_ids)
     return [
         {
             "share": _attach_owner(_share_to_dict(item["share"]), owners),
-            "recipient": _recipient_to_dict(item["recipient"], users.get(str(item["recipient"].user_id))),
+            "recipient": _recipient_to_dict(
+                item["recipient"],
+                users.get(str(item["recipient"].user_id)) if item["recipient"].user_id else None,
+            ),
         }
         for item in results
     ]
@@ -166,13 +177,16 @@ async def list_my_shares(
     results = await uc.execute(owner_id=current_user["id"])
     serialized = []
     for item in results:
-        recipient_ids = [str(r.user_id) for r in item["recipients"]]
+        recipient_ids = [str(r.user_id) for r in item["recipients"] if r.user_id]
         users = await _users_by_ids(db, recipient_ids)
         owners = await _users_by_ids(db, [str(item["share"].owner_id)])
         serialized.append(
             {
                 "share": _attach_owner(_share_to_dict(item["share"]), owners),
-                "recipients": [_recipient_to_dict(r, users.get(str(r.user_id))) for r in item["recipients"]],
+                "recipients": [
+                    _recipient_to_dict(r, users.get(str(r.user_id)) if r.user_id else None)
+                    for r in item["recipients"]
+                ],
             }
         )
     return serialized
@@ -181,7 +195,7 @@ async def list_my_shares(
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_share(
     share_id: str,
-    current_user=Depends(get_current_active_user),
+    current_user=Depends(require_not_readonly),
     db: AsyncSession = Depends(get_db),
 ):
     from app.modules.sharing.infrastructure.repositories import ShareRecipientRepository, ShareRepository

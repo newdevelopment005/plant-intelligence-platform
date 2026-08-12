@@ -14,8 +14,17 @@ interface Team {
   name: string;
   description: string | null;
   owner_id?: string;
+  department_id?: string | null;
+  parent_id?: string | null;
   members: TeamMember[];
   created_at: string;
+  subteams?: Team[];
+}
+
+interface Department {
+  id: string;
+  name: string;
+  code?: string | null;
 }
 
 export default function TeamsPage() {
@@ -25,6 +34,9 @@ export default function TeamsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamDesc, setNewTeamDesc] = useState("");
+  const [newTeamDeptId, setNewTeamDeptId] = useState<string>("");
+  const [newTeamParentId, setNewTeamParentId] = useState<string>("");
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [creating, setCreating] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamDetail, setTeamDetail] = useState<Team | null>(null);
@@ -46,7 +58,17 @@ export default function TeamsPage() {
 
   useEffect(() => {
     loadTeams();
+    loadDepartments();
   }, []);
+
+  const loadDepartments = async () => {
+    try {
+      const data = await apiClient.listDepartments();
+      setDepartments((data?.items ?? []) as Department[]);
+    } catch {
+      setDepartments([]);
+    }
+  };
 
   const loadTeams = async () => {
     setLoading(true);
@@ -81,9 +103,16 @@ export default function TeamsPage() {
     setCreating(true);
     setError("");
     try {
-      await apiClient.createTeam({ name: newTeamName.trim(), description: newTeamDesc.trim() || undefined });
+      await apiClient.createTeam({
+        name: newTeamName.trim(),
+        description: newTeamDesc.trim() || undefined,
+        department_id: newTeamDeptId || undefined,
+        parent_id: newTeamParentId || undefined,
+      });
       setNewTeamName("");
       setNewTeamDesc("");
+      setNewTeamDeptId("");
+      setNewTeamParentId("");
       setShowCreateForm(false);
       setSuccess("Team created successfully");
       loadTeams();
@@ -258,6 +287,34 @@ export default function TeamsPage() {
                 placeholder="Team purpose..."
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Department (optional)</label>
+                <select
+                  value={newTeamDeptId}
+                  onChange={(e) => setNewTeamDeptId(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">No department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Parent Team (optional)</label>
+                <select
+                  value={newTeamParentId}
+                  onChange={(e) => setNewTeamParentId(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">No parent (top-level)</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <button
               type="submit"
               disabled={creating || !newTeamName.trim()}
@@ -291,6 +348,13 @@ export default function TeamsPage() {
                   <div>
                     <h3 className="font-semibold">{team.name}</h3>
                     {team.description && <p className="text-sm text-muted-foreground mt-1">{team.description}</p>}
+                    {(team.department_id || team.parent_id) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {team.department_id && "In a department"}
+                        {team.department_id && team.parent_id && " · "}
+                        {team.parent_id && "Sub-team (has parent)"}
+                      </p>
+                    )}
                   </div>
                   <span className="text-sm text-muted-foreground">{team.members?.length ?? 0} members</span>
                 </div>
@@ -362,7 +426,6 @@ export default function TeamsPage() {
                     <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
                       <option value="member">Member</option>
                       <option value="admin">Admin</option>
-                      <option value="viewer">Viewer</option>
                     </select>
                     <div className="flex gap-2">
                       <button type="submit" disabled={inviting || !inviteSearchQuery.trim()} className="text-sm text-green-600 hover:underline disabled:opacity-50">{inviting ? "Adding..." : "Add to Team"}</button>
@@ -464,7 +527,6 @@ export default function TeamsPage() {
                       >
                         <option value="member">Member</option>
                         <option value="admin">Admin</option>
-                        <option value="viewer">Viewer</option>
                       </select>
                     </div>
                     <button
@@ -493,8 +555,41 @@ export default function TeamsPage() {
                   <div className="rounded-md bg-muted/50 p-3">
                     <span className="font-medium">Description:</span> {teamDetail.description || "None"}
                   </div>
+                  {teamDetail.parent_id && (
+                    <div className="rounded-md bg-muted/50 p-3">
+                      <span className="font-medium">Parent:</span> Yes
+                    </div>
+                  )}
+                  <div className="rounded-md bg-muted/50 p-3">
+                    <span className="font-medium">Department:</span>{" "}
+                    {teamDetail.department_id
+                      ? departments.find((d) => d.id === teamDetail.department_id)?.name || "Linked"
+                      : "None"}
+                  </div>
                 </div>
               </div>
+
+              {teamDetail.subteams && teamDetail.subteams.length > 0 && (
+                <div className="rounded-lg border bg-card p-6">
+                  <h3 className="font-semibold mb-3">Sub-teams ({teamDetail.subteams.length})</h3>
+                  <div className="space-y-2">
+                    {teamDetail.subteams.map((sub) => (
+                      <div key={sub.id} className="rounded-md bg-muted/50 p-3 text-sm flex items-center justify-between">
+                        <div>
+                          <span className="font-medium">{sub.name}</span>
+                          {sub.description && <span className="text-muted-foreground ml-2">{sub.description}</span>}
+                        </div>
+                        <button
+                          onClick={() => loadTeamDetail(sub.id)}
+                          className="text-sm text-green-600 hover:underline"
+                        >
+                          View
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground rounded-lg border">Select a team to view details.</div>

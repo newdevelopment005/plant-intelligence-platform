@@ -22,6 +22,10 @@ class TeamRepositoryInterface(ABC):
     ) -> list[TeamModel]:
         pass
 
+    @abstractmethod
+    async def list_subteams(self, parent_id: str) -> list[TeamModel]:
+        pass
+
 
 class TeamMemberRepositoryInterface(ABC):
     @abstractmethod

@@ -22,16 +22,18 @@ class CreateShareUseCase:
         owner_id: str,
         visibility: str = "private",
         user_ids: list[str] | None = None,
+        team_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
         permission: str = "read",
     ) -> dict:
         if not item_type or not item_type.strip():
             raise ValidationException("Item type is required")
 
         valid_types = (
-        "image", "entity", "paper", "project", "accession",
-        "report", "notebook_entry", "sample", "team", "germplasm",
-        "experiment",
-    )
+            "image", "entity", "paper", "project", "accession",
+            "report", "notebook_entry", "sample", "team", "germplasm",
+            "experiment",
+        )
         if item_type not in valid_types:
             raise ValidationException(f"Invalid item type. Must be one of: {', '.join(valid_types)}")
 
@@ -60,17 +62,52 @@ class CreateShareUseCase:
         share = await self.share_repo.create(share)
 
         recipients = []
+        recipient_models = []
+        now = datetime.now(UTC)
+
         if user_ids:
-            recipient_models = [
-                ShareRecipientModel(
-                    id=_uuid.uuid4(),
-                    share_id=share.id,
-                    user_id=_uuid.UUID(uid) if not isinstance(uid, _uuid.UUID) else uid,
-                    permission=permission,
-                    shared_at=datetime.now(UTC),
+            for uid in user_ids:
+                parsed = _uuid.UUID(uid) if not isinstance(uid, _uuid.UUID) else uid
+                recipient_models.append(
+                    ShareRecipientModel(
+                        id=_uuid.uuid4(),
+                        share_id=share.id,
+                        recipient_type="user",
+                        user_id=parsed,
+                        permission=permission,
+                        shared_at=now,
+                    )
                 )
-                for uid in user_ids
-            ]
+
+        if team_ids:
+            for tid in team_ids:
+                parsed = _uuid.UUID(tid) if not isinstance(tid, _uuid.UUID) else tid
+                recipient_models.append(
+                    ShareRecipientModel(
+                        id=_uuid.uuid4(),
+                        share_id=share.id,
+                        recipient_type="team",
+                        team_id=parsed,
+                        permission=permission,
+                        shared_at=now,
+                    )
+                )
+
+        if department_ids:
+            for did in department_ids:
+                parsed = _uuid.UUID(did) if not isinstance(did, _uuid.UUID) else did
+                recipient_models.append(
+                    ShareRecipientModel(
+                        id=_uuid.uuid4(),
+                        share_id=share.id,
+                        recipient_type="department",
+                        department_id=parsed,
+                        permission=permission,
+                        shared_at=now,
+                    )
+                )
+
+        if recipient_models:
             recipients = await self.recipient_repo.create_many(recipient_models)
 
         return {
@@ -89,7 +126,12 @@ class ListSharedWithMeUseCase:
         self.recipient_repo = recipient_repo
 
     async def execute(self, user_id: str) -> list[dict]:
-        recipients = await self.recipient_repo.list_shared_with_user(user_id)
+        memberships = await self.recipient_repo.list_user_memberships(user_id)
+        recipients = await self.recipient_repo.list_shared_with_user(
+            user_id,
+            team_ids=memberships["team_ids"],
+            department_ids=memberships["department_ids"],
+        )
 
         results = []
         for recipient in recipients:

@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 class CreateTeamRequest(BaseModel):
     name: str = Field(..., min_length=3, max_length=255)
     description: str | None = Field(None, max_length=5000)
+    department_id: str | None = None
+    parent_id: str | None = None
 
 
 class AddTeamMemberRequest(BaseModel):

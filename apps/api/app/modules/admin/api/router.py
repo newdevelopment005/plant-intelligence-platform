@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +29,7 @@ async def list_users(
                 "role": u.role,
                 "institution": u.institution,
                 "department": u.department,
+                "department_id": str(u.department_id) if u.department_id else None,
                 "is_active": u.is_active,
                 "created_at": u.created_at.isoformat(),
             }
@@ -84,8 +85,37 @@ async def update_user_status(
 async def get_audit_log(
     current_user: dict = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    user_id: str | None = Query(None),
+    action: str | None = Query(None),
 ):
-    return {"items": [], "total": 0}
+    from app.modules.auth.infrastructure.audit_repository import AuditLogRepository
+
+    items, total = await AuditLogRepository(db).list(
+        skip=skip,
+        limit=limit,
+        user_id=user_id,
+        action=action,
+    )
+
+    def _serialize(item: dict) -> dict:
+        meta = item.get("metadata")
+        return {
+            "id": str(item.get("id")),
+            "user_id": str(item.get("user_id")) if item.get("user_id") else None,
+            "action": item.get("action"),
+            "resource_type": item.get("resource_type"),
+            "resource_id": item.get("resource_id"),
+            "ip_address": item.get("ip_address"),
+            "metadata": meta,
+            "created_at": item.get("created_at").isoformat() if item.get("created_at") else None,
+        }
+
+    return {
+        "items": [_serialize(i) for i in items],
+        "total": total,
+    }
 
 
 @router.get("/health")
@@ -116,4 +146,128 @@ async def usage_stats(
         "total_projects": project_count,
         "total_samples": sample_count,
         "active_experiments": exp_count,
+    }
+
+
+@router.get("/teams")
+async def admin_list_teams(
+    current_user: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    search: str | None = Query(None, max_length=255),
+):
+    from app.modules.team.domain.models import TeamMemberModel, TeamModel
+
+    stmt = select(TeamModel).order_by(TeamModel.created_at.desc()).offset(skip).limit(limit)
+    if search:
+        stmt = stmt.where(TeamModel.name.ilike(f"%{search}%"))
+    teams = (await db.execute(stmt)).scalars().all()
+
+    count_stmt = select(func.count()).select_from(TeamModel)
+    if search:
+        count_stmt = count_stmt.where(TeamModel.name.ilike(f"%{search}%"))
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    team_ids = [str(t.id) for t in teams]
+    member_counts = {}
+    if team_ids:
+        counts = (
+            await db.execute(
+                select(TeamMemberModel.team_id, func.count(TeamMemberModel.id))
+                .where(TeamMemberModel.team_id.in_(team_ids))
+                .group_by(TeamMemberModel.team_id)
+            )
+        ).all()
+        member_counts = {str(cid): cnt for cid, cnt in counts}
+
+    return {
+        "items": [
+            {
+                "id": str(t.id),
+                "name": t.name,
+                "description": t.description,
+                "owner_id": str(t.owner_id) if t.owner_id else None,
+                "department_id": str(t.department_id) if t.department_id else None,
+                "parent_id": str(t.parent_id) if t.parent_id else None,
+                "member_count": member_counts.get(str(t.id), 0),
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in teams
+        ],
+        "total": total,
+    }
+
+
+@router.delete("/teams/{team_id}")
+async def admin_delete_team(
+    team_id: str,
+    current_user: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.modules.team.domain.models import TeamModel
+
+    team = (
+        await db.execute(select(TeamModel).where(TeamModel.id == team_id))
+    ).scalar_one_or_none()
+    if not team:
+        return {"message": "Team not found"}
+    await db.delete(team)
+    await db.commit()
+    return {"message": "Team deleted", "id": team_id}
+
+
+@router.get("/departments")
+async def admin_list_departments(
+    current_user: dict = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    search: str | None = Query(None, max_length=255),
+):
+    from app.modules.department.domain.models import DepartmentModel
+    from app.modules.department.domain.models import DepartmentMemberModel
+
+    stmt = (
+        select(DepartmentModel)
+        .order_by(DepartmentModel.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    if search:
+        stmt = stmt.where(DepartmentModel.name.ilike(f"%{search}%"))
+    deps = (await db.execute(stmt)).scalars().all()
+
+    count_stmt = select(func.count()).select_from(DepartmentModel)
+    if search:
+        count_stmt = count_stmt.where(DepartmentModel.name.ilike(f"%{search}%"))
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    dep_ids = [str(d.id) for d in deps]
+    member_counts = {}
+    if dep_ids:
+        counts = (
+            await db.execute(
+                select(DepartmentMemberModel.department_id, func.count(DepartmentMemberModel.id))
+                .where(DepartmentMemberModel.department_id.in_(dep_ids))
+                .group_by(DepartmentMemberModel.department_id)
+            )
+        ).all()
+        member_counts = {str(cid): cnt for cid, cnt in counts}
+
+    return {
+        "items": [
+            {
+                "id": str(d.id),
+                "name": d.name,
+                "code": d.code,
+                "description": d.description,
+                "head_user_id": str(d.head_user_id) if d.head_user_id else None,
+                "is_active": bool(d.is_active),
+                "member_count": member_counts.get(str(d.id), 0),
+                "created_at": d.created_at.isoformat(),
+            }
+            for d in deps
+        ],
+        "total": total,
     }

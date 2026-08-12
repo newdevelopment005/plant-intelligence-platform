@@ -50,10 +50,25 @@ class ShareRecipientModel(Base):
         nullable=False,
         index=True,
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    recipient_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="user"
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("team.teams.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    department_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("org.departments.id", ondelete="CASCADE"),
+        nullable=True,
         index=True,
     )
     permission: Mapped[str] = mapped_column(String(20), nullable=False, default="read")

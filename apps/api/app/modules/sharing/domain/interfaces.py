@@ -31,7 +31,15 @@ class ShareRecipientRepositoryInterface(ABC):
     async def list_by_share(self, share_id: str) -> list[ShareRecipientModel]: ...
 
     @abstractmethod
-    async def list_shared_with_user(self, user_id: str) -> list[ShareRecipientModel]: ...
+    async def list_shared_with_user(
+        self,
+        user_id: str,
+        team_ids: list[str] | None = None,
+        department_ids: list[str] | None = None,
+    ) -> list[ShareRecipientModel]: ...
+
+    @abstractmethod
+    async def list_user_memberships(self, user_id: str) -> dict: ...
 
     @abstractmethod
     async def delete_by_share(self, share_id: str) -> bool: ...

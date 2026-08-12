@@ -51,12 +51,13 @@ interface DepartmentMember {
 }
 
 export default function AdminPage() {
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"users" | "audit" | "system" | "departments">("users");
+  const [tab, setTab] = useState<"users" | "audit" | "system" | "departments" | "teams">("users");
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
   const [stats, setStats] = useState<any>(null);
 
@@ -70,7 +71,23 @@ export default function AdminPage() {
   const [deptMemberUsers, setDeptMemberUsers] = useState<Record<string, string>>({});
   const [deptSearch, setDeptSearch] = useState("");
 
-  useEffect(() => { loadData(); }, []);
+  const [adminTeams, setAdminTeams] = useState<any[]>([]);
+  const [adminTeamsTotal, setAdminTeamsTotal] = useState(0);
+  const [adminTeamsLoading, setAdminTeamsLoading] = useState(false);
+
+  useEffect(() => {
+    let currentUser: { role?: string } | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("user");
+        if (raw) currentUser = JSON.parse(raw);
+      } catch { currentUser = null; }
+    }
+    setIsAdmin(currentUser?.role === "admin");
+    if (currentUser?.role === "admin") {
+      loadData();
+    }
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -125,7 +142,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleTabChange = (newTab: "users" | "audit" | "system" | "departments") => {
+  const handleTabChange = (newTab: "users" | "audit" | "system" | "departments" | "teams") => {
     setTab(newTab);
     if (newTab === "system") {
       loadSystemHealth();
@@ -133,6 +150,35 @@ export default function AdminPage() {
     }
     if (newTab === "departments") {
       loadDepartments();
+    }
+    if (newTab === "teams") {
+      loadAdminTeams();
+    }
+  };
+
+  const loadAdminTeams = async () => {
+    setAdminTeamsLoading(true);
+    try {
+      const data = await apiClient.adminListTeams({ limit: "500" });
+      setAdminTeams(data?.items ?? []);
+      setAdminTeamsTotal(data?.total ?? 0);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load teams");
+      setTimeout(() => setError(""), 4000);
+    } finally {
+      setAdminTeamsLoading(false);
+    }
+  };
+
+  const handleAdminDeleteTeam = async (teamId: string, teamName: string) => {
+    if (!confirm(`Delete team "${teamName}"? This cannot be undone.`)) return;
+    try {
+      await apiClient.adminDeleteTeam(teamId);
+      setError("");
+      loadAdminTeams();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete team");
+      setTimeout(() => setError(""), 4000);
     }
   };
 
@@ -245,6 +291,20 @@ export default function AdminPage() {
     users.find((u) => u.id === userId)?.email ||
     userId.slice(0, 8);
 
+  if (isAdmin === false) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold">Admin</h1>
+        <div className="rounded-lg border bg-card p-8 text-center">
+          <p className="text-lg font-semibold text-red-600">Access Denied</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Only platform administrators can view this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -257,6 +317,7 @@ export default function AdminPage() {
         <button onClick={() => handleTabChange("audit")} className={`pb-2 px-4 text-sm font-medium ${tab === "audit" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Audit Log</button>
         <button onClick={() => handleTabChange("system")} className={`pb-2 px-4 text-sm font-medium ${tab === "system" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>System</button>
         <button onClick={() => handleTabChange("departments")} className={`pb-2 px-4 text-sm font-medium ${tab === "departments" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Departments</button>
+        <button onClick={() => handleTabChange("teams")} className={`pb-2 px-4 text-sm font-medium ${tab === "teams" ? "border-b-2 border-green-600" : "text-muted-foreground"}`}>Teams</button>
       </div>
 
       {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
@@ -581,6 +642,51 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+      {tab === "teams" && (
+        <div>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Team</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Department</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Parent</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Members</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Created</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {adminTeamsLoading ? (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                ) : adminTeams.map((t) => (
+                  <tr key={t.id} className="border-t hover:bg-muted/20">
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-medium">{t.name}</div>
+                      {t.description && <div className="text-xs text-muted-foreground">{t.description}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {t.department_id ? departments.find((d) => d.id === t.department_id)?.name || "Linked" : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {t.parent_id ? adminTeams.find((p) => p.id === t.parent_id)?.name || "Yes" : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{t.member_count ?? 0}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{new Date(t.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      <button onClick={() => handleAdminDeleteTeam(t.id, t.name)} className="text-red-600 hover:underline">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+                {adminTeams.length === 0 && !adminTeamsLoading && (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No teams found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{adminTeamsTotal} total teams</p>
         </div>
       )}
     </div>

@@ -38,6 +38,8 @@ def _team_to_dict(team) -> dict:
         "name": team.name,
         "description": team.description,
         "owner_id": str(team.owner_id),
+        "department_id": str(team.department_id) if team.department_id else None,
+        "parent_id": str(team.parent_id) if team.parent_id else None,
         "created_at": team.created_at.isoformat(),
         "updated_at": team.updated_at.isoformat(),
     }
@@ -128,6 +130,8 @@ async def create_team(
         name=body.name,
         owner_id=current_user["id"],
         description=body.description,
+        department_id=body.department_id,
+        parent_id=body.parent_id,
     )
 
     logger.info(

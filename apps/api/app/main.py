@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 
 from app.config import settings
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_not_readonly
 from app.core.exceptions import register_exception_handlers
 from app.core.health import router as health_router
 from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware
@@ -107,24 +107,116 @@ def create_app() -> FastAPI:
 
     application.include_router(health_router, tags=["Health"])
     application.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
-    application.include_router(ai_assistant_router, prefix="/api/v1/ai", tags=["AI Research Assistant"])
-    application.include_router(project_router, prefix="/api/v1/projects", tags=["Projects"])
-    application.include_router(germplasm_router, prefix="/api/v1/germplasm", tags=["Germplasm"])
-    application.include_router(phenotyping_router, prefix="/api/v1/phenotyping", tags=["Phenotyping"])
-    application.include_router(genomics_router, prefix="/api/v1/genomics", tags=["Genomics"])
-    application.include_router(molecular_router, prefix="/api/v1/molecular", tags=["Molecular Biology"])
-    application.include_router(bioinformatics_router, prefix="/api/v1/bioinformatics", tags=["Bioinformatics"])
-    application.include_router(literature_router, prefix="/api/v1/literature", tags=["Literature"])
-    application.include_router(knowledge_graph_router, prefix="/api/v1/knowledge-graph", tags=["Knowledge Graph"])
-    application.include_router(notebook_router, prefix="/api/v1/notebook", tags=["Notebook"])
-    application.include_router(lims_router, prefix="/api/v1/lims", tags=["LIMS"])
-    application.include_router(image_analysis_router, prefix="/api/v1/images", tags=["Image Analysis"])
-    application.include_router(reporting_router, prefix="/api/v1/reports", tags=["Reporting"])
-    application.include_router(sharing_router, prefix="/api/v1/sharing", tags=["Sharing"])
-    application.include_router(team_router, prefix="/api/v1/teams", tags=["Teams"])
-    application.include_router(department_router, prefix="/api/v1/departments", tags=["Departments"])
-    application.include_router(meeting_router, prefix="/api/v1/meetings", tags=["Meetings"])
-    application.include_router(admin_router, prefix="/api/v1/admin", tags=["Administration"])
+
+    write_guarded = Depends(require_not_readonly)
+
+    application.include_router(
+        ai_assistant_router,
+        prefix="/api/v1/ai",
+        tags=["AI Research Assistant"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        project_router,
+        prefix="/api/v1/projects",
+        tags=["Projects"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        germplasm_router,
+        prefix="/api/v1/germplasm",
+        tags=["Germplasm"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        phenotyping_router,
+        prefix="/api/v1/phenotyping",
+        tags=["Phenotyping"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        genomics_router,
+        prefix="/api/v1/genomics",
+        tags=["Genomics"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        molecular_router,
+        prefix="/api/v1/molecular",
+        tags=["Molecular Biology"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        bioinformatics_router,
+        prefix="/api/v1/bioinformatics",
+        tags=["Bioinformatics"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        literature_router,
+        prefix="/api/v1/literature",
+        tags=["Literature"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        knowledge_graph_router,
+        prefix="/api/v1/knowledge-graph",
+        tags=["Knowledge Graph"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        notebook_router,
+        prefix="/api/v1/notebook",
+        tags=["Notebook"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        lims_router,
+        prefix="/api/v1/lims",
+        tags=["LIMS"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        image_analysis_router,
+        prefix="/api/v1/images",
+        tags=["Image Analysis"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        reporting_router,
+        prefix="/api/v1/reports",
+        tags=["Reporting"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        sharing_router,
+        prefix="/api/v1/sharing",
+        tags=["Sharing"],
+    )
+    application.include_router(
+        team_router,
+        prefix="/api/v1/teams",
+        tags=["Teams"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        department_router,
+        prefix="/api/v1/departments",
+        tags=["Departments"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        meeting_router,
+        prefix="/api/v1/meetings",
+        tags=["Meetings"],
+        dependencies=[write_guarded],
+    )
+    application.include_router(
+        admin_router,
+        prefix="/api/v1/admin",
+        tags=["Administration"],
+        dependencies=[write_guarded],
+    )
 
     @application.get("/storage/{file_path:path}")
     async def serve_storage(file_path: str):
