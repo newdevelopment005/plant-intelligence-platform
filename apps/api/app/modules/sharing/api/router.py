@@ -132,8 +132,20 @@ async def share_item(
                 base_url="https://plant-intelligence-platform.vercel.app",
             )
 
-    if emails and not email_ids:
-        share_dict["unresolved_emails"] = emails
+    if emails:
+        resolved_set = set(email_ids)
+        unresolved = [e for e in emails if e not in resolved_set]
+        if unresolved:
+            from app.core.email import send_share_invite_to_unresolved
+
+            for email in unresolved:
+                send_share_invite_to_unresolved(
+                    to_email=email,
+                    sharer_name=current_user.get("full_name") or current_user.get("email") or "A colleague",
+                    item_type=share_dict["item_type"],
+                    base_url="https://plant-intelligence-platform.vercel.app",
+                )
+            share_dict["unresolved_emails"] = unresolved
     return share_dict
 
 

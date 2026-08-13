@@ -192,4 +192,5 @@ async def update_attendee_status(
         attendee_id=attendee_id,
         user_id=current_user["id"],
         status=body.status,
+        user_email=current_user.get("email"),
     )

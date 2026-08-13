@@ -296,7 +296,12 @@ class UpdateAttendeeStatusUseCase:
         self.attendee_repo = attendee_repo
 
     async def execute(
-        self, meeting_id: str, attendee_id: str, user_id: str, status: str
+        self,
+        meeting_id: str,
+        attendee_id: str,
+        user_id: str,
+        status: str,
+        user_email: str | None = None,
     ) -> dict:
         if status not in VALID_ATTENDEE_STATUS:
             raise ValidationException(
@@ -307,7 +312,9 @@ class UpdateAttendeeStatusUseCase:
         if not meeting:
             raise NotFoundException("Meeting", meeting_id)
 
-        attendee = await self.attendee_repo.update_status(attendee_id, status, user_id)
+        attendee = await self.attendee_repo.update_status(
+            attendee_id, status, user_id, user_email
+        )
         if not attendee:
             raise NotFoundException("Invitation", attendee_id)
 

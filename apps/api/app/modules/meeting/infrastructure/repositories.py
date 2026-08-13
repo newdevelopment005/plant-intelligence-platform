@@ -112,19 +112,32 @@ class MeetingAttendeeRepository(MeetingAttendeeRepositoryInterface):
         return attendees
 
     async def update_status(
-        self, attendee_id: str, status: str, user_id: str
+        self, attendee_id: str, status: str, user_id: str, user_email: str | None = None
     ) -> MeetingAttendeeModel | None:
-        result = await self.db.execute(
-            select(MeetingAttendeeModel).where(
-                MeetingAttendeeModel.id == attendee_id,
-                MeetingAttendeeModel.user_id == user_id,
-            )
+        """Update an attendee's status, matching the attendee either by their
+        linked user_id or by invited email (email-based invitations store
+        user_id as NULL)."""
+        stmt = select(MeetingAttendeeModel).where(
+            MeetingAttendeeModel.id == attendee_id,
         )
+        if user_email:
+            # Prefer a user_id match, but fall back to an email match for
+            # invitations that were created from a plain email address.
+            stmt = stmt.where(
+                (MeetingAttendeeModel.user_id == user_id)
+                | (MeetingAttendeeModel.email == user_email)
+            )
+        else:
+            stmt = stmt.where(MeetingAttendeeModel.user_id == user_id)
+        result = await self.db.execute(stmt)
         attendee = result.scalar_one_or_none()
         if not attendee:
             return None
         attendee.status = status
         attendee.acknowledged_at = datetime.now(UTC)
+        if attendee.user_id is None and user_id:
+            # Link the attendee to the registered user once they respond.
+            attendee.user_id = user_id
         await self.db.flush()
         await self.db.refresh(attendee)
         return attendee

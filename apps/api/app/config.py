@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
-    SMTP_FROM: str = "noreply@pip-platform.org"
+    SMTP_FROM: str = ""
 
     def validate_production(self) -> None:
         """Fail fast in production when anyone relies on default secrets.

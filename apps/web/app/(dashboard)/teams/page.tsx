@@ -14,6 +14,7 @@ interface Team {
   name: string;
   description: string | null;
   owner_id?: string;
+  owner?: { id?: string; full_name?: string; email?: string } | null;
   department_id?: string | null;
   parent_id?: string | null;
   members: TeamMember[];
@@ -375,7 +376,7 @@ export default function TeamsPage() {
                   <div>
                     <h2 className="text-xl font-bold">{teamDetail.name}</h2>
                     {teamDetail.description && <p className="text-sm text-muted-foreground mt-1">{teamDetail.description}</p>}
-                    {teamDetail.owner_id && <p className="text-xs text-muted-foreground mt-1">Owner: {teamDetail.owner_id}</p>}
+                    {teamDetail.owner && <p className="text-xs text-muted-foreground mt-1">Owner: {teamDetail.owner.full_name || teamDetail.owner.email || teamDetail.owner_id}</p>}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -548,6 +549,10 @@ export default function TeamsPage() {
                   </div>
                   <div className="rounded-md bg-muted/50 p-3">
                     <span className="font-medium">Members:</span> {teamDetail.members?.length ?? 0}
+                  </div>
+                  <div className="rounded-md bg-muted/50 p-3">
+                    <span className="font-medium">Owner:</span>{" "}
+                    {teamDetail.owner?.full_name || teamDetail.owner?.email || teamDetail.owner_id || "Unknown"}
                   </div>
                   <div className="rounded-md bg-muted/50 p-3">
                     <span className="font-medium">Created:</span> {new Date(teamDetail.created_at).toLocaleDateString()}

@@ -35,12 +35,18 @@ def _generate_pdf_report(report: ReportModel) -> str:
     story.append(Paragraph(f"<b>Report Type:</b> {report.report_type}", styles["Normal"]))
     story.append(Paragraph(f"<b>Status:</b> Generated", styles["Normal"]))
     story.append(Paragraph(f"<b>Generated:</b> {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}", styles["Normal"]))
+    if report.data_source:
+        story.append(Paragraph(f"<b>Data Source:</b> {report.data_source}", styles["Normal"]))
     if report.description:
         story.append(Spacer(1, 12))
         story.append(Paragraph(f"<b>Description:</b> {report.description}", styles["Normal"]))
     if report.tags:
         story.append(Spacer(1, 6))
         story.append(Paragraph(f"<b>Tags:</b> {', '.join(report.tags)}", styles["Normal"]))
+    if report.parameters and report.parameters.get("detailed_data_text"):
+        story.append(Spacer(1, 12))
+        story.append(Paragraph("<b>Detailed Data:</b>", styles["Normal"]))
+        story.append(Paragraph(report.parameters["detailed_data_text"], styles["BodyText"]))
 
     story.append(Spacer(1, 24))
     story.append(Paragraph("This is a generated report from the Plant Intelligence Platform.", styles["Normal"]))
@@ -65,6 +71,8 @@ class CreateReportUseCase:
         parameters: dict | None = None,
         tags: list[str] | None = None,
         project_id: str | None = None,
+        file_url: str | None = None,
+        file_size_bytes: int | None = None,
     ) -> ReportModel:
         if not name or not name.strip():
             raise ValidationException("Report name is required")
@@ -94,6 +102,8 @@ class CreateReportUseCase:
             parameters=parameters,
             tags=tags,
             project_id=project_id,
+            file_url=file_url,
+            file_size_bytes=file_size_bytes,
             created_by=user_id,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
@@ -102,7 +112,10 @@ class CreateReportUseCase:
         report = await self.report_repo.create(report)
 
         try:
-            if format == "pdf":
+            if file_url:
+                # A ready-made file was attached; no generation needed.
+                report.status = "completed"
+            elif format == "pdf":
                 file_url = _generate_pdf_report(report)
                 report.file_url = file_url
                 report.status = "completed"
@@ -202,9 +215,6 @@ class UpdateReportUseCase:
 
         if str(report.created_by) != user_id:
             raise ValidationException("Only the creator can update this report")
-
-        if report.status not in ("pending", "failed"):
-            raise ValidationException("Only pending or failed reports can be edited")
 
         if name is not None:
             if not name.strip():

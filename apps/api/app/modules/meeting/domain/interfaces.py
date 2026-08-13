@@ -47,7 +47,7 @@ class MeetingAttendeeRepositoryInterface(ABC):
 
     @abstractmethod
     async def update_status(
-        self, attendee_id: str, status: str, user_id: str
+        self, attendee_id: str, status: str, user_id: str, user_email: str | None = None
     ) -> MeetingAttendeeModel | None:
         pass
 

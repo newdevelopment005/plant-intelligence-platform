@@ -13,6 +13,8 @@ class CreateReportRequest(BaseModel):
     parameters: dict | None = None
     tags: list[str] | None = Field(None, max_length=20)
     project_id: str | None = None
+    file_url: str | None = None
+    file_size_bytes: int | None = None
 
 
 class UpdateReportRequest(BaseModel):

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Leaf } from "lucide-react";
+import { apiClient } from "@/lib/api-client";
 
 export default function Login() {
   const router = useRouter();
@@ -14,6 +15,30 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState(
+    () => new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("registered")
+      ? "Account created. Please check your email to verify your account before signing in."
+      : new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("verified")
+      ? "Your email has been verified. You can now sign in."
+      : ""
+  );
+  const [resendMsg, setResendMsg] = useState("");
+  const [resending, setResending] = useState(false);
+
+  const handleResend = async () => {
+    if (!email.trim()) { setError("Enter your email to resend the verification link."); return; }
+    setResending(true);
+    setError("");
+    try {
+      const res = await apiClient.resendVerification(email.trim());
+      setResendMsg(res?.message || "Verification link resent");
+      setTimeout(() => setResendMsg(""), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification");
+    } finally {
+      setResending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +119,16 @@ export default function Login() {
                 {error}
               </div>
             )}
+            {info && (
+              <div className="rounded-lg border border-blue-500/50 bg-blue-50 p-3 text-sm text-blue-700">
+                {info}
+              </div>
+            )}
+            {resendMsg && (
+              <div className="rounded-lg border border-green-500/50 bg-green-50 p-3 text-sm text-green-700">
+                {resendMsg}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -129,6 +164,10 @@ export default function Login() {
             <Button type="submit" disabled={loading} className="w-full h-11">
               {loading ? "Signing in..." : "Sign In"}
             </Button>
+
+            <button type="button" onClick={handleResend} disabled={resending} className="w-full text-center text-xs text-primary hover:underline">
+              {resending ? "Sending..." : "Didn't receive the verification email? Resend it"}
+            </button>
           </form>
 
           <p className="text-center text-sm text-muted-foreground">

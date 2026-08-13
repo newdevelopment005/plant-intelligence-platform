@@ -1,5 +1,6 @@
 
 import structlog
+from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,8 +12,10 @@ from app.modules.auth.api.schemas import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
+    ResendVerificationRequest,
     ResetPasswordRequest,
     UpdateProfileRequest,
+    VerifyEmailRequest,
 )
 from app.modules.auth.domain.login_use_case import LoginUseCase
 from app.modules.auth.domain.logout_use_case import LogoutUseCase
@@ -31,6 +34,7 @@ from app.modules.auth.infrastructure.audit_repository import AuditLogRepository
 from app.modules.auth.infrastructure.password_reset_repository import PasswordResetRepository
 from app.modules.auth.infrastructure.repositories import UserRepository
 from app.modules.auth.infrastructure.token_repository import TokenRepository
+from app.core.security import create_verification_token
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -54,6 +58,8 @@ def _get_audit_repo(db: AsyncSession) -> AuditLogRepository:
 
 @router.post("/register", status_code=201)
 async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    from app.core.email import send_verification_email
+
     user_repo = _get_user_repo(db)
     use_case = RegisterUserUseCase(user_repo)
 
@@ -67,6 +73,14 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
 
     logger.info("user_registered", user_id=str(user.id), email=user.email)
 
+    verify_token = create_verification_token(str(user.id))
+    send_verification_email(
+        to_email=user.email,
+        user_name=user.full_name,
+        verify_token=verify_token,
+        base_url="https://plant-intelligence-platform.vercel.app",
+    )
+
     return {
         "message": "Registration successful. Please check your email to verify your account.",
         "user": {
@@ -75,6 +89,50 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
             "full_name": user.full_name,
         },
     }
+
+
+@router.post("/resend-verification")
+async def resend_verification(
+    body: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.core.email import send_verification_email
+
+    user_repo = _get_user_repo(db)
+    user = await user_repo.get_by_email(body.email)
+    if user and not user.is_verified:
+        verify_token = create_verification_token(str(user.id))
+        send_verification_email(
+            to_email=user.email,
+            user_name=user.full_name,
+            verify_token=verify_token,
+            base_url="https://plant-intelligence-platform.vercel.app",
+        )
+    return {"message": "If the email is registered, a verification link has been sent"}
+
+
+@router.post("/verify-email")
+async def verify_email(
+    body: VerifyEmailRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.core.security import decode_verification_token
+
+    user_repo = _get_user_repo(db)
+
+    user_id = decode_verification_token(body.token)
+    user = await user_repo.get_by_id(user_id) if user_id else None
+    if not user:
+        from app.core.exceptions import ValidationException
+        raise ValidationException("Invalid or expired verification link")
+
+    if not user.is_verified:
+        user.is_verified = True
+        user.updated_at = datetime.now(UTC)
+        await user_repo.update(user)
+        logger.info("email_verified", user_id=str(user.id))
+
+    return {"message": "Email verified successfully"}
 
 
 @router.post("/login")

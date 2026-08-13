@@ -38,3 +38,19 @@ def decode_token(token: str) -> dict | None:
         return payload
     except JWTError:
         return None
+
+
+def create_verification_token(user_id: str) -> str:
+    to_encode = {"sub": str(user_id), "type": "verify_email"}
+    expire = datetime.now(UTC) + timedelta(hours=24)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_verification_token(token: str) -> str | None:
+    payload = decode_token(token)
+    if not payload:
+        return None
+    if payload.get("type") != "verify_email":
+        return None
+    return payload.get("sub")

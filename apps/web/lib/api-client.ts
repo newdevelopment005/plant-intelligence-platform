@@ -184,6 +184,20 @@ class ApiClient {
     });
   }
 
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    return this.request("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    return this.request("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     return this.request("/auth/reset-password", {
       method: "POST",
@@ -618,6 +632,30 @@ class ApiClient {
     return this.request<any>(`/lims/equipment/${id}`, { method: "DELETE" });
   }
 
+  async createEquipment(data: {
+    name: string;
+    equipment_code: string;
+    description?: string;
+    category?: string;
+    status?: string;
+    location?: string;
+    manufacturer?: string;
+    model_number?: string;
+    serial_number?: string;
+  }) {
+    return this.request<any>("/lims/equipment", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateEquipment(id: string, data: any) {
+    return this.request<any>(`/lims/equipment/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async updatePrimer(experimentId: string, primerId: string, data: any) {
     return this.request<any>(`/molecular/experiments/${experimentId}/primers/${primerId}`, {
       method: "PUT",
@@ -714,6 +752,22 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  async uploadReportFile(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`${this.baseUrl}/reports/upload`, {
+      method: "POST",
+      headers: { "ngrok-skip-browser-warning": "true", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: form,
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: { message: "Upload failed" } }));
+      throw new Error(error.error?.message || `HTTP ${response.status}`);
+    }
+    return response.json();
   }
 
   async updateReport(id: string, data: any) {

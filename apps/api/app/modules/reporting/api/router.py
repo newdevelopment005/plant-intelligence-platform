@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_active_user
@@ -87,8 +87,36 @@ async def create_report(
         parameters=request.parameters,
         tags=request.tags,
         project_id=request.project_id,
+        file_url=request.file_url,
+        file_size_bytes=request.file_size_bytes,
     )
     return _report_to_dict(report)
+
+
+@router.post("/upload", status_code=status.HTTP_201_CREATED)
+async def upload_report_file(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_active_user),
+):
+    """Attach a ready-made report file. Returns the stored URL and metadata."""
+    from app.shared.file_storage import save_uploaded_file
+
+    if not file.filename:
+        from app.core.exceptions import ValidationException
+        raise ValidationException("File is required")
+
+    url = await save_uploaded_file(file, "reports")
+    return {
+        "file_url": url,
+        "format": _format_from_filename(file.filename),
+        "filename": file.filename,
+    }
+
+
+def _format_from_filename(filename: str | None) -> str:
+    ext = (filename or "").rsplit(".", 1)[-1].lower()
+    mapping = {"pdf": "pdf", "csv": "csv", "json": "json", "xlsx": "xlsx", "xls": "xlsx", "html": "html", "htm": "html", "docx": "docx"}
+    return mapping.get(ext, "pdf")
 
 
 @router.get("", response_model=PaginatedReportsResponse)

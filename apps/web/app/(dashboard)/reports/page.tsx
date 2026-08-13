@@ -6,9 +6,11 @@ import { apiClient } from "@/lib/api-client";
 interface Report {
   id: string;
   name: string;
+  description?: string | null;
   report_type: string;
   status: string;
   format: string;
+  tags?: string[] | null;
   created_at: string;
 }
 
@@ -18,9 +20,11 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ name: "", report_type: "project_summary", format: "pdf" });
+  const [form, setForm] = useState({ name: "", report_type: "project_summary", format: "pdf", description: "", data_source: "", detailed_data_text: "" });
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", report_type: "project_summary", format: "pdf" });
+  const [editForm, setEditForm] = useState({ name: "", description: "", tags: "" });
 
   useEffect(() => { loadReports(); }, []);
 
@@ -38,25 +42,57 @@ export default function ReportsPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiClient.createReport(form);
+      const payload: any = {
+        name: form.name,
+        report_type: form.report_type,
+        format: form.format,
+        description: form.description.trim() || null,
+        data_source: form.data_source.trim() || null,
+      };
+      if (form.detailed_data_text.trim()) {
+        payload.parameters = { detailed_data_text: form.detailed_data_text.trim() };
+      }
+      if (attachedFile) {
+        setUploading(true);
+        const uploadResult = await apiClient.uploadReportFile(attachedFile);
+        payload.file_url = uploadResult.file_url;
+        payload.file_size_bytes = uploadResult.file_size_bytes;
+        payload.format = uploadResult.format;
+      }
+      await apiClient.createReport(payload);
       setShowCreate(false);
-      setForm({ name: "", report_type: "project_summary", format: "pdf" });
+      setForm({ name: "", report_type: "project_summary", format: "pdf", description: "", data_source: "", detailed_data_text: "" });
+      setAttachedFile(null);
       loadReports();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create");
+    } finally {
+      setUploading(false);
     }
   };
 
   const startEdit = (r: Report) => {
     setEditingId(r.id);
-    setEditForm({ name: r.name, report_type: r.report_type, format: r.format });
+    setEditForm({
+      name: r.name,
+      description: r.description ?? "",
+      tags: r.tags?.join(", ") ?? "",
+    });
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
     try {
-      await apiClient.updateReport(editingId, editForm);
+      const tags = editForm.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      await apiClient.updateReport(editingId, {
+        name: editForm.name,
+        description: editForm.description || null,
+        tags,
+      });
       setEditingId(null);
       loadReports();
     } catch (err) {
@@ -135,9 +171,33 @@ export default function ReportsPage() {
                   <option value="json">JSON</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium">Description</label>
+                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2" rows={2} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Data Source</label>
+                <input type="text" value={form.data_source} onChange={(e) => setForm({ ...form, data_source: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2" placeholder="e.g. Phenotyping Experiment #12, field trials Q1" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Detailed Data Text</label>
+                <textarea value={form.detailed_data_text} onChange={(e) => setForm({ ...form, detailed_data_text: e.target.value })} className="mt-1 block w-full rounded-md border px-3 py-2" rows={3} placeholder="Paste or type detailed findings, observations, or raw data to embed in the report..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Attach Ready-Made Report (optional)</label>
+                <input
+                  type="file"
+                  accept=".pdf,.csv,.json,.xlsx,.xls,.html,.htm,.docx"
+                  onChange={(e) => setAttachedFile(e.target.files?.[0] ?? null)}
+                  className="mt-1 block w-full text-sm"
+                />
+                {attachedFile && (
+                  <p className="mt-1 text-xs text-green-600">Attached: {attachedFile.name}</p>
+                )}
+              </div>
               <div className="flex gap-2 justify-end">
                 <button type="button" onClick={() => setShowCreate(false)} className="rounded-md border px-4 py-2 hover:bg-gray-50">Cancel</button>
-                <button type="submit" className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700">Create</button>
+                <button type="submit" disabled={uploading} className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50">{uploading ? "Uploading..." : "Create"}</button>
               </div>
             </form>
           </div>
@@ -163,48 +223,77 @@ export default function ReportsPage() {
             <tbody>
               {reports.map((r) => (
                 <tr key={r.id} className="border-t hover:bg-muted/20">
-                  {editingId === r.id ? (
-                    <td colSpan={5} className="px-4 py-3">
-                      <form onSubmit={handleUpdate} className="flex items-center gap-3">
-                        <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="flex-1 rounded border px-2 py-1 text-sm" placeholder="Name" />
-                        <select value={editForm.report_type} onChange={(e) => setEditForm({ ...editForm, report_type: e.target.value })} className="rounded border px-2 py-1 text-sm">
-                          <option value="project_summary">Project Summary</option>
-                          <option value="phenotyping">Phenotyping</option>
-                          <option value="genotyping">Genotyping</option>
-                          <option value="germplasm">Germplasm</option>
-                          <option value="experiment">Experiment</option>
-                          <option value="statistical">Statistical</option>
-                        </select>
-                        <select value={editForm.format} onChange={(e) => setEditForm({ ...editForm, format: e.target.value })} className="rounded border px-2 py-1 text-sm">
-                          <option value="pdf">PDF</option>
-                          <option value="csv">CSV</option>
-                          <option value="json">JSON</option>
-                        </select>
-                        <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
-                        <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
-                      </form>
-                    </td>
-                  ) : (
-                    <>
-                      <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
-                      <td className="px-4 py-3 text-sm">{r.report_type}</td>
-                      <td className="px-4 py-3 text-sm uppercase">{r.format}</td>
-                      <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${r.status === "completed" ? "bg-green-100 text-green-800" : r.status === "generating" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{r.status}</span></td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button onClick={() => startEdit(r)} className="text-sm text-blue-600 hover:underline">Edit</button>
-                          {r.status === "completed" && (
-                            <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-green-600 hover:underline">Download</button>
-                          )}
-                          <button onClick={() => handleDelete(r.id)} className="text-sm text-red-600 hover:underline">Delete</button>
-                        </div>
-                      </td>
-                    </>
-                  )}
+                  <td className="px-4 py-3 text-sm font-medium">{r.name}</td>
+                  <td className="px-4 py-3 text-sm">{r.report_type}</td>
+                  <td className="px-4 py-3 text-sm uppercase">{r.format}</td>
+                  <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-medium ${r.status === "completed" ? "bg-green-100 text-green-800" : r.status === "generating" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{r.status}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button onClick={() => startEdit(r)} className="text-sm text-blue-600 hover:underline">Edit</button>
+                      {r.status === "completed" && (
+                        <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-green-600 hover:underline">Download</button>
+                      )}
+                      <button onClick={() => handleDelete(r.id)} className="text-sm text-red-600 hover:underline">Delete</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-4">Edit Report</h2>
+            <form onSubmit={handleUpdate} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium">Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Description</label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Tags</label>
+                <input
+                  type="text"
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                  className="mt-1 block w-full rounded-md border px-3 py-2"
+                  placeholder="comma, separated, tags"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingId(null)}
+                  className="rounded-md border px-4 py-2 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
