@@ -8,9 +8,16 @@ Enterprise-grade AI-powered scientific research platform for plant science.
 
 ## Live Demo
 
-- **Frontend**: [pip-platform.vercel.app](https://pip-platform.vercel.app)
-- **API Docs**: [api.pip-platform.org/docs](https://api.pip-platform.org/docs)
-- **AI Service**: [pip-ai-service.hf.space](https://pip-ai-service.hf.space)
+- **Frontend**: [plant-intelligence-platform.vercel.app](https://plant-intelligence-platform.vercel.app)
+
+> The live demo is a hosted frontend. The AI assistant requires a backend with an
+> Ollama/LLM service, so it works best in a self-hosted installation (below).
+
+## Documentation
+
+- **User manual (researchers)**: [USER_MANUAL.md](USER_MANUAL.md) — how to use every feature.
+- **Installation / IT guide**: [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) — install, configure, and run on your own computer or server (internal LAN or external/Internet), including AI setup, backups, and troubleshooting.
+- **Cloud deployment**: [DEPLOYMENT.md](DEPLOYMENT.md) — Vercel (frontend), Hugging Face Spaces (AI), managed databases.
 
 ## Architecture
 
@@ -24,23 +31,46 @@ Enterprise-grade AI-powered scientific research platform for plant science.
 
 ### Prerequisites
 
-- Python 3.12+
-- Node.js 20+
-- Docker & Docker Compose
-- PostgreSQL 16+
+- Docker & Docker Compose (recommended — no Node.js/Python needed on the host)
+- Git
 
-### Development Setup
+### Quick Start (Docker, recommended)
 
 ```bash
 # Clone the repository
 git clone https://github.com/newdevelopment005/plant-intelligence-platform.git
 cd plant-intelligence-platform
 
+# Copy environment variables and edit them (secrets, CORS, SMTP, AI settings)
+cp .env.example .env
+
+# Build and start all services (web, api, ai-service + databases)
+docker compose up -d --build
+
+# Run database migrations
+docker compose run --rm api alembic upgrade head
+
+# Open the platform
+#   http://localhost:3000
+```
+
+The AI assistant uses **Ollama** locally by default. Install Ollama
+(https://ollama.com), run `ollama pull gemma2:2b`, and point `OLLAMA_BASE_URL`
+at it (see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md), section 6). A cloud
+LLM can be used instead via `USE_LOCAL_LLM=False` + `OPENAI_API_KEY`.
+
+For a full step-by-step install (internal network, external/Internet server,
+environment variable reference, first admin, backups, troubleshooting), see
+[INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md).
+
+### Development Setup (manual)
+
+```bash
 # Copy environment variables
 cp .env.example .env
 
-# Start databases
-docker-compose up -d postgres neo4j qdrant redis
+# Start databases only
+docker compose up -d postgres neo4j qdrant redis
 
 # Install API dependencies
 cd apps/api
@@ -120,11 +150,15 @@ plant-intelligence-platform/
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
 
+> Don't want to use Vercel? You can run the whole platform on your own server
+> with Docker, or host the frontend on Railway/Render/Fly.io/Netlify/Cloudflare
+> Pages instead — see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md), section 7.3.
+
 ### Quick Deploy
 
 **Frontend (Vercel)**
+The Vercel project root is `apps/web`, so deploy from the repository root:
 ```bash
-cd apps/web
 vercel --prod
 ```
 
