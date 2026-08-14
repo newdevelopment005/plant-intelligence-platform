@@ -70,6 +70,10 @@ export default function AdminPage() {
   const [deptMembers, setDeptMembers] = useState<DepartmentMember[]>([]);
   const [deptMemberUsers, setDeptMemberUsers] = useState<Record<string, string>>({});
   const [deptSearch, setDeptSearch] = useState("");
+  const [deptSmtp, setDeptSmtp] = useState<{ configured: boolean; host?: string; port?: number; user?: string; from_email?: string } | null>(null);
+  const [deptSmtpForm, setDeptSmtpForm] = useState({ host: "", port: 587, user: "", password: "", from_email: "" });
+  const [deptSmtpLoading, setDeptSmtpLoading] = useState(false);
+  const [deptSmtpMsg, setDeptSmtpMsg] = useState("");
 
   const [adminTeams, setAdminTeams] = useState<any[]>([]);
   const [adminTeamsTotal, setAdminTeamsTotal] = useState(0);
@@ -196,11 +200,63 @@ export default function AdminPage() {
 
   const loadDeptMembers = async (deptId: string) => {
     try {
-      const data = await apiClient.getDepartment(deptId);
       setSelectedDept(deptId);
+      setDeptSmtpMsg("");
+      const [data, smtpData] = await Promise.all([
+        apiClient.getDepartment(deptId),
+        apiClient.getDepartmentSmtp(deptId),
+      ]);
       setDeptMembers(data?.members ?? []);
+      setDeptSmtp(smtpData ?? null);
+      setDeptSmtpForm({
+        host: smtpData?.host ?? "",
+        port: smtpData?.port ?? 587,
+        user: smtpData?.user ?? "",
+        password: "",
+        from_email: smtpData?.from_email ?? "",
+      });
     } catch (err) {
+      setDeptSmtp(null);
       setError(err instanceof Error ? err.message : "Failed to load department");
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleDeptSmtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDept) return;
+    setDeptSmtpLoading(true);
+    setDeptSmtpMsg("");
+    try {
+      await apiClient.updateDepartmentSmtp(selectedDept, {
+        host: deptSmtpForm.host,
+        port: Number(deptSmtpForm.port) || 587,
+        user: deptSmtpForm.user,
+        password: deptSmtpForm.password,
+        from_email: deptSmtpForm.from_email,
+      });
+      setDeptSmtpMsg("SMTP settings saved");
+      setDeptSmtpForm((f) => ({ ...f, password: "" }));
+      setTimeout(() => setDeptSmtpMsg(""), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save SMTP settings");
+      setTimeout(() => setError(""), 4000);
+    } finally {
+      setDeptSmtpLoading(false);
+    }
+  };
+
+  const handleDeptSmtpClear = async () => {
+    if (!selectedDept) return;
+    if (!window.confirm("Clear this department's SMTP settings? Its emails will fall back to the platform default.")) return;
+    try {
+      await apiClient.deleteDepartmentSmtp(selectedDept);
+      setDeptSmtp({ configured: false });
+      setDeptSmtpForm({ host: "", port: 587, user: "", password: "", from_email: "" });
+      setDeptSmtpMsg("SMTP settings cleared");
+      setTimeout(() => setDeptSmtpMsg(""), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to clear SMTP settings");
       setTimeout(() => setError(""), 4000);
     }
   };
@@ -634,6 +690,82 @@ export default function AdminPage() {
                       )}
                     </tbody>
                   </table>
+
+                  <div className="mt-8 rounded-lg border bg-muted/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold">Email (SMTP) Settings</h4>
+                        <p className="text-xs text-muted-foreground">
+                          Used to send this department&apos;s invite, verification and reminder emails.
+                          Leave unset to use the platform default email.
+                        </p>
+                      </div>
+                      {deptSmtp?.configured ? (
+                        <button onClick={handleDeptSmtpClear} className="text-sm text-red-600 hover:underline">Clear</button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Not configured</span>
+                      )}
+                    </div>
+                    <form onSubmit={handleDeptSmtpSubmit} className="mt-3 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium mb-1">SMTP Host *</label>
+                        <input
+                          required
+                          value={deptSmtpForm.host}
+                          onChange={(e) => setDeptSmtpForm({ ...deptSmtpForm, host: e.target.value })}
+                          placeholder="smtp.gmail.com"
+                          className="w-full rounded-md border bg-card px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Port</label>
+                        <input
+                          type="number"
+                          value={deptSmtpForm.port}
+                          onChange={(e) => setDeptSmtpForm({ ...deptSmtpForm, port: Number(e.target.value) })}
+                          className="w-full rounded-md border bg-card px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Username</label>
+                        <input
+                          value={deptSmtpForm.user}
+                          onChange={(e) => setDeptSmtpForm({ ...deptSmtpForm, user: e.target.value })}
+                          placeholder="dept@university.edu"
+                          className="w-full rounded-md border bg-card px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Password / App Password</label>
+                        <input
+                          type="password"
+                          value={deptSmtpForm.password}
+                          onChange={(e) => setDeptSmtpForm({ ...deptSmtpForm, password: e.target.value })}
+                          placeholder="••••••••"
+                          className="w-full rounded-md border bg-card px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium mb-1">From Address</label>
+                        <input
+                          value={deptSmtpForm.from_email}
+                          onChange={(e) => setDeptSmtpForm({ ...deptSmtpForm, from_email: e.target.value })}
+                          placeholder="noreply@university.edu"
+                          className="w-full rounded-md border bg-card px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2 flex items-center justify-end gap-3">
+                        {deptSmtpMsg && <span className="text-sm text-green-700">{deptSmtpMsg}</span>}
+                        <button
+                          type="submit"
+                          disabled={deptSmtpLoading}
+                          className="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                        >
+                          {deptSmtpLoading ? "Saving..." : "Save SMTP Settings"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
               ) : (
                 <div className="flex h-full min-h-[300px] items-center justify-center text-muted-foreground">

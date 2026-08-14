@@ -74,11 +74,15 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     logger.info("user_registered", user_id=str(user.id), email=user.email)
 
     verify_token = create_verification_token(str(user.id))
+    from app.core.email import resolve_smtp_for_user
+
+    smtp = await resolve_smtp_for_user(db, str(user.id))
     send_verification_email(
         to_email=user.email,
         user_name=user.full_name,
         verify_token=verify_token,
         base_url="https://plant-intelligence-platform.vercel.app",
+        smtp=smtp,
     )
 
     return {
@@ -101,12 +105,16 @@ async def resend_verification(
     user_repo = _get_user_repo(db)
     user = await user_repo.get_by_email(body.email)
     if user and not user.is_verified:
+        from app.core.email import resolve_smtp_for_user
+
         verify_token = create_verification_token(str(user.id))
+        smtp = await resolve_smtp_for_user(db, str(user.id))
         send_verification_email(
             to_email=user.email,
             user_name=user.full_name,
             verify_token=verify_token,
             base_url="https://plant-intelligence-platform.vercel.app",
+            smtp=smtp,
         )
     return {"message": "If the email is registered, a verification link has been sent"}
 

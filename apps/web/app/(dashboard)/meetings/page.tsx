@@ -107,11 +107,13 @@ export default function MeetingsPage() {
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+      const startsIso = form.starts_at ? new Date(form.starts_at).toISOString() : "";
+      const endsIso = form.ends_at ? new Date(form.ends_at).toISOString() : undefined;
       await apiClient.createMeeting({
         title: form.title.trim(),
-        starts_at: form.starts_at,
+        starts_at: startsIso,
         description: form.description.trim() || undefined,
-        ends_at: form.ends_at || undefined,
+        ends_at: endsIso,
         location: form.location.trim() || undefined,
         meeting_link: form.meeting_link.trim() || undefined,
         reminder_option: form.reminder_option,

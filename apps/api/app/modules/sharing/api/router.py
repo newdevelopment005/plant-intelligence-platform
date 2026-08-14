@@ -121,8 +121,9 @@ async def share_item(
     for r in result["recipients"]:
         user = users.get(str(r.user_id))
         if user and user.get("email") and user.get("email") != current_user.get("email"):
-            from app.core.email import send_share_notification
+            from app.core.email import resolve_smtp_for_user, send_share_notification
 
+            smtp = await resolve_smtp_for_user(db, str(r.user_id))
             send_share_notification(
                 to_email=user["email"],
                 sharer_name=current_user.get("full_name") or current_user.get("email") or "A colleague",
@@ -130,20 +131,23 @@ async def share_item(
                 item_id=share_dict["item_id"],
                 permission=share_dict["recipients"][0]["permission"],
                 base_url="https://plant-intelligence-platform.vercel.app",
+                smtp=smtp,
             )
 
     if emails:
         resolved_set = set(email_ids)
         unresolved = [e for e in emails if e not in resolved_set]
         if unresolved:
-            from app.core.email import send_share_invite_to_unresolved
+            from app.core.email import resolve_smtp_for_user, send_share_invite_to_unresolved
 
+            owner_smtp = await resolve_smtp_for_user(db, current_user.get("id"))
             for email in unresolved:
                 send_share_invite_to_unresolved(
                     to_email=email,
                     sharer_name=current_user.get("full_name") or current_user.get("email") or "A colleague",
                     item_type=share_dict["item_type"],
                     base_url="https://plant-intelligence-platform.vercel.app",
+                    smtp=owner_smtp,
                 )
             share_dict["unresolved_emails"] = unresolved
     return share_dict

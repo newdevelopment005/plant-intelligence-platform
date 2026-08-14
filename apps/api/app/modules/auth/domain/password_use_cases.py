@@ -19,7 +19,7 @@ class ForgotPasswordUseCase:
         self.reset_repo = reset_repo
 
     async def execute(self, email: str) -> dict:
-        from app.core.email import send_password_reset
+        from app.core.email import resolve_smtp_for_user, send_password_reset
 
         user = await self.user_repo.get_by_email(email.lower().strip())
 
@@ -33,10 +33,15 @@ class ForgotPasswordUseCase:
                 expires_at=datetime.now(UTC) + timedelta(hours=1),
             )
             await self.reset_repo.save_token(reset_token)
+            from app.database import async_session_factory
+
+            async with async_session_factory() as db:
+                smtp = await resolve_smtp_for_user(db, str(user.id))
             send_password_reset(
                 to_email=user.email,
                 reset_token=token,
                 base_url="https://plant-intelligence-platform.vercel.app",
+                smtp=smtp,
             )
 
         return {"message": "If the email exists, a password reset link has been sent"}

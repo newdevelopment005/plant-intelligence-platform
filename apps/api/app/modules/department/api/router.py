@@ -13,9 +13,11 @@ from app.modules.department.api.schemas import (
     CreateDepartmentRequest,
     DepartmentMemberResponse,
     DepartmentResponse,
+    DepartmentSmtpResponse,
     PaginatedDepartmentsResponse,
     UpdateDepartmentMemberRoleRequest,
     UpdateDepartmentRequest,
+    UpdateDepartmentSmtpRequest,
 )
 from app.modules.department.domain.use_cases import (
     AddDepartmentMemberUseCase,
@@ -245,6 +247,91 @@ async def get_department(
         if head:
             result["head_user"] = head
     return result
+
+
+@router.get("/{department_id}/smtp", response_model=DepartmentSmtpResponse)
+async def get_department_smtp(
+    department_id: str,
+    current_user: dict = Depends(require_admin_or_department_head),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.core.exceptions import NotFoundException
+
+    repo = _get_department_repo(db)
+    department = await repo.get_by_id(department_id)
+    if not department:
+        raise NotFoundException("Department", department_id)
+    configured = bool(department.smtp_host and department.smtp_user and department.smtp_password)
+    return DepartmentSmtpResponse(
+        configured=configured,
+        host=department.smtp_host,
+        port=department.smtp_port,
+        user=department.smtp_user,
+        from_email=department.smtp_from,
+    )
+
+
+@router.put("/{department_id}/smtp", response_model=DepartmentSmtpResponse)
+async def update_department_smtp(
+    department_id: str,
+    body: UpdateDepartmentSmtpRequest,
+    current_user: dict = Depends(require_admin_or_department_head),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.core.exceptions import NotFoundException
+
+    repo = _get_department_repo(db)
+    department = await repo.get_by_id(department_id)
+    if not department:
+        raise NotFoundException("Department", department_id)
+
+    department.smtp_host = body.host.strip()
+    department.smtp_port = body.port
+    department.smtp_user = body.user.strip()
+    department.smtp_password = body.password
+    department.smtp_from = body.from_email.lower() if body.from_email else None
+    department = await repo.update(department)
+
+    logger.info(
+        "department_smtp_updated",
+        department_id=str(department.id),
+        user_id=current_user["id"],
+    )
+    return DepartmentSmtpResponse(
+        configured=True,
+        host=department.smtp_host,
+        port=department.smtp_port,
+        user=department.smtp_user,
+        from_email=department.smtp_from,
+    )
+
+
+@router.delete("/{department_id}/smtp", response_model=DepartmentSmtpResponse)
+async def clear_department_smtp(
+    department_id: str,
+    current_user: dict = Depends(require_admin_or_department_head),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.core.exceptions import NotFoundException
+
+    repo = _get_department_repo(db)
+    department = await repo.get_by_id(department_id)
+    if not department:
+        raise NotFoundException("Department", department_id)
+
+    department.smtp_host = None
+    department.smtp_port = None
+    department.smtp_user = None
+    department.smtp_password = None
+    department.smtp_from = None
+    department = await repo.update(department)
+
+    logger.info(
+        "department_smtp_cleared",
+        department_id=str(department.id),
+        user_id=current_user["id"],
+    )
+    return DepartmentSmtpResponse(configured=False)
 
 
 @router.post("/{department_id}/members", response_model=DepartmentMemberResponse, status_code=201)

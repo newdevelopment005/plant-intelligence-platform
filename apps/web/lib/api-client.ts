@@ -979,6 +979,24 @@ class ApiClient {
     });
   }
 
+  async getDepartmentSmtp(departmentId: string) {
+    return this.request<any>(`/departments/${departmentId}/smtp`);
+  }
+
+  async updateDepartmentSmtp(
+    departmentId: string,
+    data: { host: string; port?: number; user?: string; password?: string; from_email?: string }
+  ) {
+    return this.request<any>(`/departments/${departmentId}/smtp`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDepartmentSmtp(departmentId: string) {
+    return this.request<void>(`/departments/${departmentId}/smtp`, { method: "DELETE" });
+  }
+
   // =============================================
   // Meetings
   // =============================================

@@ -194,7 +194,7 @@ async def invite_member_by_email(
     current_user: dict = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.core.email import send_team_invite_email
+    from app.core.email import resolve_smtp_for_user, send_team_invite_email
     from app.modules.auth.infrastructure.repositories import UserRepository
 
     email = body.email.lower().strip()
@@ -225,12 +225,14 @@ async def invite_member_by_email(
             target_user_id = str(member.user_id)
             added = True
 
+    smtp = await resolve_smtp_for_user(db, str(user.id)) if user else None
     send_team_invite_email(
         to_email=email,
         inviter_name=current_user.get("full_name") or current_user.get("email") or "A colleague",
         team_name=team.name,
         role=body.role,
         base_url="https://plant-intelligence-platform.vercel.app",
+        smtp=smtp,
     )
 
     return {

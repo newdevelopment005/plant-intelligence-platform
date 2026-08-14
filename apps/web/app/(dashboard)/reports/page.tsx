@@ -100,6 +100,20 @@ export default function ReportsPage() {
     }
   };
 
+  const handleView = async (id: string) => {
+    try {
+      const data = await apiClient.request(`/reports/${id}/download`);
+      if (data.download_url) {
+        const viewUrl = data.download_url.startsWith("http") ? data.download_url : `/api/images${data.download_url}`;
+        window.open(viewUrl, "_blank");
+      } else {
+        setError("Report file is not available to view");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to open report");
+    }
+  };
+
   const handleDownload = async (id: string, name: string) => {
     try {
       const data = await apiClient.request(`/reports/${id}/download`);
@@ -231,7 +245,10 @@ export default function ReportsPage() {
                     <div className="flex gap-2">
                       <button onClick={() => startEdit(r)} className="text-sm text-blue-600 hover:underline">Edit</button>
                       {r.status === "completed" && (
-                        <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-green-600 hover:underline">Download</button>
+                        <>
+                          <button onClick={() => handleView(r.id)} className="text-sm text-indigo-600 hover:underline">View</button>
+                          <button onClick={() => handleDownload(r.id, r.name)} className="text-sm text-green-600 hover:underline">Download</button>
+                        </>
                       )}
                       <button onClick={() => handleDelete(r.id)} className="text-sm text-red-600 hover:underline">Delete</button>
                     </div>

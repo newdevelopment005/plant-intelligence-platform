@@ -38,26 +38,49 @@ def _get_attendee_repo(db: AsyncSession) -> MeetingAttendeeRepository:
     return MeetingAttendeeRepository(db)
 
 
-async def _notify_attendees(db: AsyncSession, meeting_id: str, meeting_title: str, starts_at: str, location: str | None) -> None:
-    from app.core.email import send_meeting_reminder
+async def _notify_attendees(db: AsyncSession, meeting_id: str, meeting_title: str, starts_at: str, location: str | None, invite: bool = False, inviter_name: str = "") -> None:
+    from app.core.email import resolve_smtp_for_user, send_meeting_invite, send_meeting_reminder
     from app.modules.auth.infrastructure.repositories import UserRepository
 
     attendee_repo = _get_attendee_repo(db)
     attendees = await attendee_repo.list_by_meeting(meeting_id)
-    user_ids = [str(a.user_id) for a in attendees if a.user_id]
-    emails = [a.email for a in attendees if a and a.email]
-    if user_ids:
-        users = await UserRepository(db).get_by_ids(user_ids)
-        emails.extend(u.email for u in users if u.email)
 
-    for email in set(emails):
-        send_meeting_reminder(
-            to_email=email,
-            meeting_title=meeting_title,
-            starts_at_iso=starts_at,
-            location=location,
-            base_url="https://plant-intelligence-platform.vercel.app",
-        )
+    recipients: dict[str, dict | None] = {}
+    for a in attendees:
+        if a and a.email:
+            recipients[a.email] = None
+        if a.user_id:
+            smtp = await resolve_smtp_for_user(db, str(a.user_id))
+            user = None
+            if a.email is None:
+                user = await UserRepository(db).get_by_id(str(a.user_id))
+                email = user.email if user else None
+                if email:
+                    recipients[email] = smtp
+            else:
+                recipients[a.email] = smtp or recipients.get(a.email)
+
+    deliver = send_meeting_invite if invite else send_meeting_reminder
+    for email, smtp in recipients.items():
+        if invite:
+            deliver(
+                to_email=email,
+                inviter_name=inviter_name,
+                meeting_title=meeting_title,
+                starts_at_iso=starts_at,
+                location=location,
+                base_url="https://plant-intelligence-platform.vercel.app",
+                smtp=smtp,
+            )
+        else:
+            deliver(
+                to_email=email,
+                meeting_title=meeting_title,
+                starts_at_iso=starts_at,
+                location=location,
+                base_url="https://plant-intelligence-platform.vercel.app",
+                smtp=smtp,
+            )
 
 
 @router.get("", response_model=PaginatedMeetingsResponse)
@@ -101,7 +124,18 @@ async def create_meeting(
         user_id=current_user["id"],
     )
     get_use_case = GetMeetingUseCase(_get_meeting_repo(db), _get_attendee_repo(db))
-    return await get_use_case.execute(meeting_id=result["id"], user_id=current_user["id"])
+    result = await get_use_case.execute(meeting_id=result["id"], user_id=current_user["id"])
+
+    await _notify_attendees(
+        db,
+        meeting_id=result["id"],
+        meeting_title=result["title"],
+        starts_at=result["starts_at"],
+        location=result.get("location"),
+        invite=True,
+        inviter_name=current_user.get("full_name") or current_user.get("email") or "The organizer",
+    )
+    return result
 
 
 @router.post("/{meeting_id}/send-reminders")

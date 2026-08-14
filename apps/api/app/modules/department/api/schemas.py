@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class CreateDepartmentRequest(BaseModel):
@@ -14,6 +14,22 @@ class UpdateDepartmentRequest(BaseModel):
     description: str | None = Field(None, max_length=5000)
     head_user_id: str | None = None
     is_active: bool | None = None
+
+
+class UpdateDepartmentSmtpRequest(BaseModel):
+    host: str = Field(..., min_length=3, max_length=255)
+    port: int = Field(default=587, ge=1, le=65535)
+    user: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=1, max_length=255)
+    from_email: EmailStr | None = None
+
+
+class DepartmentSmtpResponse(BaseModel):
+    configured: bool
+    host: str | None = None
+    port: int | None = None
+    user: str | None = None
+    from_email: str | None = None
 
 
 class AddDepartmentMemberRequest(BaseModel):

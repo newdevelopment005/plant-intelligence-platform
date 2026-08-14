@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
 
+    DISABLE_MEETING_REMINDER_SCHEDULER: bool = False
+
     def validate_production(self) -> None:
         """Fail fast in production when anyone relies on default secrets.
 

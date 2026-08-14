@@ -76,11 +76,12 @@ class MeetingRepository(MeetingRepositoryInterface):
 
     async def list_meetings_needing_reminders(self) -> list[MeetingModel]:
         now = datetime.now(UTC)
+        window_start = now - timedelta(hours=2)
         window_end = now + timedelta(minutes=24 * 60)
         result = await self.db.execute(
             select(MeetingModel).where(
                 MeetingModel.reminder_sent.is_(False),
-                MeetingModel.starts_at >= now,
+                MeetingModel.starts_at >= window_start,
                 MeetingModel.starts_at <= window_end,
             )
         )

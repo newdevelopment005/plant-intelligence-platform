@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,6 +27,11 @@ class DepartmentModel(Base):
     is_active: Mapped[bool] = mapped_column(
         nullable=False, default=True, server_default="true"
     )
+    smtp_host: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    smtp_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    smtp_user: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    smtp_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    smtp_from: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_by: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("auth.users.id", ondelete="CASCADE"),

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -77,8 +78,31 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting API service", environment=settings.ENVIRONMENT)
-    yield
-    logger.info("Shutting down API service")
+
+    reminder_task: asyncio.Task | None = None
+
+    async def _meeting_reminder_loop():
+        while True:
+            try:
+                await asyncio.sleep(60)
+                from app.modules.meeting.tasks import send_due_meeting_reminders
+
+                await send_due_meeting_reminders()
+            except asyncio.CancelledError:
+                logger.info("meeting_reminder_loop_stopped")
+                return
+            except Exception:
+                logger.exception("meeting_reminder_loop_error")
+
+    if not settings.DISABLE_MEETING_REMINDER_SCHEDULER:
+        reminder_task = asyncio.create_task(_meeting_reminder_loop())
+
+    try:
+        yield
+    finally:
+        if reminder_task:
+            reminder_task.cancel()
+        logger.info("Shutting down API service")
 
 
 def create_app() -> FastAPI:
