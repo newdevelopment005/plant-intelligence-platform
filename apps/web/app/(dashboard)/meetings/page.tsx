@@ -39,6 +39,28 @@ function formatDate(iso: string) {
   }
 }
 
+function isoToLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch {
+    return "";
+  }
+}
+
+function minutesToReminderOption(minutes: number | undefined): string {
+  if (!minutes || minutes === 0) return "at_time";
+  if (minutes === 5) return "5m";
+  if (minutes === 10) return "10m";
+  if (minutes === 15) return "15m";
+  if (minutes === 30) return "30m";
+  if (minutes === 60) return "1h";
+  if (minutes >= 1440) return "1d";
+  return "30m";
+}
+
 export default function MeetingsPage() {
   const currentUser = useAuthStore((s) => s.user);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -62,6 +84,16 @@ export default function MeetingsPage() {
   });
   const [creating, setCreating] = useState(false);
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    starts_at: "",
+    ends_at: "",
+    location: "",
+    meeting_link: "",
+    reminder_option: "30m",
+  });
 
   useEffect(() => {
     loadMeetings();
@@ -177,6 +209,42 @@ export default function MeetingsPage() {
       notify(`Invitation ${status}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update invitation");
+    }
+  };
+
+  const startEditMeeting = (meeting: Meeting) => {
+    setEditForm({
+      title: meeting.title,
+      description: meeting.description ?? "",
+      starts_at: isoToLocalInput(meeting.starts_at),
+      ends_at: isoToLocalInput(meeting.ends_at),
+      location: meeting.location ?? "",
+      meeting_link: meeting.meeting_link ?? "",
+      reminder_option: minutesToReminderOption(meeting.reminder_minutes_before),
+    });
+    setEditingMeeting(true);
+  };
+
+  const handleUpdateMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMeeting) return;
+    setError("");
+    try {
+      await apiClient.updateMeeting(selectedMeeting.id, {
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || undefined,
+        starts_at: editForm.starts_at ? new Date(editForm.starts_at).toISOString() : undefined,
+        ends_at: editForm.ends_at ? new Date(editForm.ends_at).toISOString() : undefined,
+        location: editForm.location.trim() || undefined,
+        meeting_link: editForm.meeting_link.trim() || undefined,
+        reminder_option: editForm.reminder_option,
+      });
+      setEditingMeeting(false);
+      notify("Meeting updated");
+      await loadMeetingDetail(selectedMeeting.id);
+      loadMeetings();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update meeting");
     }
   };
 
@@ -396,14 +464,109 @@ export default function MeetingsPage() {
               <div className="flex items-start justify-between">
                 <h3 className="font-semibold">{selectedMeeting.title}</h3>
                 {isOrganizer && (
-                  <button
-                    onClick={() => handleDelete(selectedMeeting)}
-                    className="text-sm text-red-600 hover:text-red-700"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <button
+                      onClick={() => startEditMeeting(selectedMeeting)}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(selectedMeeting)}
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
               </div>
+              {editingMeeting ? (
+                <form onSubmit={handleUpdateMeeting} className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Title *</label>
+                    <input
+                      value={editForm.title}
+                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Description</label>
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Start *</label>
+                    <input
+                      type="datetime-local"
+                      value={editForm.starts_at}
+                      onChange={(e) => setEditForm({ ...editForm, starts_at: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">End</label>
+                    <input
+                      type="datetime-local"
+                      value={editForm.ends_at}
+                      onChange={(e) => setEditForm({ ...editForm, ends_at: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Location</label>
+                    <input
+                      value={editForm.location}
+                      onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Meeting link</label>
+                    <input
+                      value={editForm.meeting_link}
+                      onChange={(e) => setEditForm({ ...editForm, meeting_link: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Reminder</label>
+                    <select
+                      value={editForm.reminder_option}
+                      onChange={(e) => setEditForm({ ...editForm, reminder_option: e.target.value })}
+                      className="w-full rounded-md border px-3 py-2 text-sm"
+                    >
+                      {REMINDER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingMeeting(false)}
+                      className="text-sm text-muted-foreground hover:underline"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </form>
+              ) : (
+              <>
               <dl className="space-y-2 text-sm">
                 <div>
                   <dt className="text-muted-foreground">When</dt>
@@ -493,6 +656,8 @@ export default function MeetingsPage() {
                   <p className="text-sm text-muted-foreground">No attendees invited.</p>
                 )}
               </div>
+              </>
+              )}
             </div>
           ) : (
             <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">

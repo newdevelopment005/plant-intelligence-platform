@@ -6,10 +6,14 @@ import { apiClient } from "@/lib/api-client";
 interface PlantImage {
   id: string;
   name: string;
+  description: string | null;
   file_url: string;
   thumbnail_url: string | null;
   image_type: string;
   species: string | null;
+  tissue_type: string | null;
+  growth_stage: string | null;
+  tags: string[] | null;
   width: number | null;
   height: number | null;
   created_at: string;
@@ -32,7 +36,15 @@ export default function ImagesPage() {
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", image_type: "" });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    description: "",
+    image_type: "",
+    species: "",
+    tissue_type: "",
+    growth_stage: "",
+    tags: "",
+  });
   const [viewImage, setViewImage] = useState<PlantImage | null>(null);
 
   useEffect(() => { loadImages(); }, []);
@@ -69,14 +81,34 @@ export default function ImagesPage() {
 
   const startEdit = (img: PlantImage) => {
     setEditingId(img.id);
-    setEditForm({ name: img.name, image_type: img.image_type });
+    setEditForm({
+      name: img.name,
+      description: img.description ?? "",
+      image_type: img.image_type,
+      species: img.species ?? "",
+      tissue_type: img.tissue_type ?? "",
+      growth_stage: img.growth_stage ?? "",
+      tags: (img.tags ?? []).join(", "),
+    });
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
     try {
-      await apiClient.updateImage(editingId, editForm);
+      const tags = editForm.tags
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      await apiClient.updateImage(editingId, {
+        name: editForm.name,
+        description: editForm.description.trim() || undefined,
+        image_type: editForm.image_type,
+        species: editForm.species.trim() || undefined,
+        tissue_type: editForm.tissue_type.trim() || undefined,
+        growth_stage: editForm.growth_stage.trim() || undefined,
+        tags: tags.length ? tags : undefined,
+      });
       setEditingId(null);
       loadImages();
     } catch (err) {
@@ -228,17 +260,33 @@ export default function ImagesPage() {
               <div className="p-3">
                 {editingId === img.id ? (
                   <form onSubmit={handleUpdate} className="space-y-2">
+                    <label className="block text-xs font-medium text-muted-foreground">Name</label>
                     <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm" />
+                    <label className="block text-xs font-medium text-muted-foreground">Image Type</label>
                     <select value={editForm.image_type} onChange={(e) => setEditForm({ ...editForm, image_type: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm">
+                      <option value="general">General</option>
                       <option value="leaf">Leaf</option>
-                      <option value="flower">Flower</option>
-                      <option value="fruit">Fruit</option>
-                      <option value="seed">Seed</option>
                       <option value="root">Root</option>
-                      <option value="whole_plant">Whole Plant</option>
-                      <option value="other">Other</option>
+                      <option value="seed">Seed</option>
+                      <option value="fruit">Fruit</option>
+                      <option value="flower">Flower</option>
+                      <option value="microscopy">Microscopy</option>
+                      <option value="drone">Drone</option>
+                      <option value="phenotype">Phenotype</option>
+                      <option value="xray">X-Ray</option>
+                      <option value="thermal">Thermal</option>
                     </select>
-                    <div className="flex gap-1">
+                    <label className="block text-xs font-medium text-muted-foreground">Description</label>
+                    <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm" rows={2} />
+                    <label className="block text-xs font-medium text-muted-foreground">Species</label>
+                    <input type="text" value={editForm.species} onChange={(e) => setEditForm({ ...editForm, species: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm" />
+                    <label className="block text-xs font-medium text-muted-foreground">Tissue Type</label>
+                    <input type="text" value={editForm.tissue_type} onChange={(e) => setEditForm({ ...editForm, tissue_type: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm" />
+                    <label className="block text-xs font-medium text-muted-foreground">Growth Stage</label>
+                    <input type="text" value={editForm.growth_stage} onChange={(e) => setEditForm({ ...editForm, growth_stage: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm" />
+                    <label className="block text-xs font-medium text-muted-foreground">Tags (comma separated)</label>
+                    <input type="text" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} className="block w-full rounded border px-2 py-1 text-sm" placeholder="drought, field_trial" />
+                    <div className="flex gap-2">
                       <button type="submit" className="text-xs text-green-600 hover:underline">Save</button>
                       <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
                     </div>
