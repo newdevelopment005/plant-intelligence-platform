@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
-import { useAuthStore } from "@/stores/auth-store";
 
 interface Meeting {
   id: string;
@@ -62,7 +61,7 @@ function minutesToReminderOption(minutes: number | undefined): string {
 }
 
 export default function MeetingsPage() {
-  const currentUser = useAuthStore((s) => s.user);
+  const [currentUser, setCurrentUser] = useState<{ id?: string; email?: string } | null>(null);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -96,6 +95,12 @@ export default function MeetingsPage() {
   });
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      setCurrentUser(raw ? JSON.parse(raw) : null);
+    } catch {
+      setCurrentUser(null);
+    }
     loadMeetings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
