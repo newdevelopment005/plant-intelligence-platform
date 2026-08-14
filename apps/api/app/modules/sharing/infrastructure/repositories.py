@@ -117,3 +117,13 @@ class ShareRecipientRepository(ShareRecipientRepositoryInterface):
             delete(ShareRecipientModel).where(ShareRecipientModel.share_id == share_id)
         )
         return result.rowcount > 0
+
+    async def delete_for_user(self, share_id: str, user_id: str) -> bool:
+        result = await self.db.execute(
+            delete(ShareRecipientModel).where(
+                ShareRecipientModel.share_id == share_id,
+                ShareRecipientModel.recipient_type == "user",
+                ShareRecipientModel.user_id == user_id,
+            )
+        )
+        return result.rowcount > 0

@@ -189,6 +189,26 @@ class RevokeShareUseCase:
         return await self.share_repo.delete(share_id)
 
 
+class RemoveRecipientUseCase:
+    def __init__(
+        self,
+        share_repo: ShareRepositoryInterface,
+        recipient_repo: ShareRecipientRepositoryInterface,
+    ):
+        self.share_repo = share_repo
+        self.recipient_repo = recipient_repo
+
+    async def execute(self, share_id: str, user_id: str) -> bool:
+        share = await self.share_repo.get_by_id(share_id)
+        if not share:
+            raise NotFoundException("Share", share_id)
+
+        if not await self.recipient_repo.delete_for_user(share_id, user_id):
+            raise ValidationException("You are not a recipient of this share")
+
+        return True
+
+
 class AccessByTokenUseCase:
     def __init__(self, share_repo: ShareRepositoryInterface):
         self.share_repo = share_repo

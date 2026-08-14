@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface Meeting {
   id: string;
@@ -39,6 +40,7 @@ function formatDate(iso: string) {
 }
 
 export default function MeetingsPage() {
+  const currentUser = useAuthStore((s) => s.user);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -181,6 +183,16 @@ export default function MeetingsPage() {
   const visibleMeetings = showUpcomingOnly
     ? meetings.filter((m) => new Date(m.starts_at) >= new Date())
     : meetings;
+
+  const isOrganizer = !!selectedMeeting && selectedMeeting.created_by === currentUser?.id;
+
+  const isMyAttendee = (attendee: { user_id: string | null; email: string | null }) => {
+    if (attendee.user_id && currentUser?.id && attendee.user_id === currentUser.id) return true;
+    if (attendee.email && currentUser?.email) {
+      return attendee.email.toLowerCase() === currentUser.email.toLowerCase();
+    }
+    return false;
+  };
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -383,12 +395,14 @@ export default function MeetingsPage() {
             <div className="sticky top-6 space-y-4 rounded-lg border bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between">
                 <h3 className="font-semibold">{selectedMeeting.title}</h3>
-                <button
-                  onClick={() => handleDelete(selectedMeeting)}
-                  className="text-sm text-red-600 hover:text-red-700"
-                >
-                  Delete
-                </button>
+                {isOrganizer && (
+                  <button
+                    onClick={() => handleDelete(selectedMeeting)}
+                    className="text-sm text-red-600 hover:text-red-700"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
               <dl className="space-y-2 text-sm">
                 <div>
@@ -423,13 +437,15 @@ export default function MeetingsPage() {
                   </div>
                 )}
               </dl>
-              <button
-                onClick={handleSendReminders}
-                disabled={sendingReminders}
-                className="w-full rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
-              >
-                {sendingReminders ? "Sending..." : "Send reminders by email"}
-              </button>
+              {isOrganizer && (
+                <button
+                  onClick={handleSendReminders}
+                  disabled={sendingReminders}
+                  className="w-full rounded-lg bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/20 disabled:opacity-50"
+                >
+                  {sendingReminders ? "Sending..." : "Send reminders by email"}
+                </button>
+              )}
 
               <div>
                 <p className="mb-2 text-sm font-medium">Attendees</p>
@@ -445,7 +461,7 @@ export default function MeetingsPage() {
                         <span className="min-w-0 truncate">
                           {a.email || (a.user_id ? "Registered user" : "No email")}
                         </span>
-                        {a.status === "pending" && (
+                        {a.status === "pending" && isMyAttendee(a) && (
                           <span className="flex shrink-0 gap-1">
                             <button
                               onClick={() => handleUpdateAttendee(a.id, "accepted")}
@@ -460,6 +476,9 @@ export default function MeetingsPage() {
                               Decline
                             </button>
                           </span>
+                        )}
+                        {a.status === "pending" && !isMyAttendee(a) && (
+                          <span className="shrink-0 text-xs font-medium text-muted-foreground">Pending</span>
                         )}
                         {a.status === "accepted" && (
                           <span className="shrink-0 text-xs font-medium text-green-600">Accepted</span>

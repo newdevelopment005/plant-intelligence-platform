@@ -318,4 +318,10 @@ class UpdateAttendeeStatusUseCase:
         if not attendee:
             raise NotFoundException("Invitation", attendee_id)
 
-        return {"message": f"Invitation {status}"}
+        return {
+            "id": str(attendee.id),
+            "user_id": str(attendee.user_id) if attendee.user_id else None,
+            "email": attendee.email,
+            "status": attendee.status,
+            "invited_at": attendee.invited_at.isoformat(),
+        }

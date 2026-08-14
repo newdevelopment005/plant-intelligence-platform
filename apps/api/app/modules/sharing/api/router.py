@@ -16,6 +16,7 @@ from app.modules.sharing.domain.use_cases import (
     CreateShareUseCase,
     ListMySharesUseCase,
     ListSharedWithMeUseCase,
+    RemoveRecipientUseCase,
     RevokeShareUseCase,
 )
 
@@ -219,6 +220,20 @@ async def revoke_share(
     share_repo = ShareRepository(db)
     recipient_repo = ShareRecipientRepository(db)
     uc = RevokeShareUseCase(share_repo=share_repo, recipient_repo=recipient_repo)
+    await uc.execute(share_id=share_id, user_id=current_user["id"])
+
+
+@router.delete("/{share_id}/recipients/me", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_my_recipient(
+    share_id: str,
+    current_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.modules.sharing.infrastructure.repositories import ShareRecipientRepository, ShareRepository
+
+    share_repo = ShareRepository(db)
+    recipient_repo = ShareRecipientRepository(db)
+    uc = RemoveRecipientUseCase(share_repo=share_repo, recipient_repo=recipient_repo)
     await uc.execute(share_id=share_id, user_id=current_user["id"])
 
 

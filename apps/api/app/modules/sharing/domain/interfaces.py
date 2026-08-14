@@ -43,3 +43,6 @@ class ShareRecipientRepositoryInterface(ABC):
 
     @abstractmethod
     async def delete_by_share(self, share_id: str) -> bool: ...
+
+    @abstractmethod
+    async def delete_for_user(self, share_id: str, user_id: str) -> bool: ...

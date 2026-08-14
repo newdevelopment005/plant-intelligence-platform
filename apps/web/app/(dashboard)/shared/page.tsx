@@ -38,6 +38,7 @@ export default function SharedPage() {
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; email: string; full_name: string }[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [viewingItem, setViewingItem] = useState<SharedItem | null>(null);
 
   useEffect(() => {
     loadSharedWithMe();
@@ -124,6 +125,38 @@ export default function SharedPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to revoke share");
     }
+  };
+
+  const handleRemoveAccess = async (shareId: string) => {
+    if (!confirm("Remove this share from your list? You will lose access to the item.")) return;
+    setError("");
+    try {
+      await apiClient.removeMyShareAccess(shareId);
+      setSuccess("Share access removed");
+      loadSharedWithMe();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove access");
+    }
+  };
+
+  const ITEM_ROUTES: Record<string, string> = {
+    image: "/images",
+    report: "/reports",
+    notebook_entry: "/notebook",
+    paper: "/literature",
+    sample: "/lims",
+    team: "/teams",
+    entity: "/knowledge-graph",
+    experiment: "/phenotyping",
+  };
+
+  const itemRoute = (item: SharedItem): string | null => {
+    if (item.item_type === "project") return `/projects/${item.item_id}`;
+    if (item.item_type === "accession" || item.item_type === "germplasm") {
+      return `/germplasm/accessions/${item.item_id}`;
+    }
+    return ITEM_ROUTES[item.item_type] ?? null;
   };
 
   const handleShare = async (e: React.FormEvent) => {
@@ -221,14 +254,32 @@ export default function SharedPage() {
       </div>
       <div className="flex items-center gap-3">
         <span className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span>
-        {showRevoke && (
+        <button
+          onClick={() => setViewingItem(item)}
+          className="text-sm text-blue-600 hover:text-blue-800"
+        >
+          View
+        </button>
+        {(showRevoke || item.permission === "write") && itemRoute(item) && (
+          <a href={itemRoute(item)!} className="text-sm text-green-600 hover:text-green-800">
+            Edit
+          </a>
+        )}
+        {showRevoke ? (
           <button
             onClick={() => handleRevoke(item.id)}
             className="text-sm text-red-600 hover:text-red-800"
           >
             Revoke
           </button>
-        )}
+        ) : item.shared_with ? (
+          <button
+            onClick={() => handleRemoveAccess(item.id)}
+            className="text-sm text-red-600 hover:text-red-800"
+          >
+            Delete
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -404,6 +455,55 @@ export default function SharedPage() {
           </div>
         )}
       </div>
+
+      {viewingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setViewingItem(null)}>
+          <div className="w-full max-w-lg rounded-lg border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Shared Item Details</h3>
+              <button onClick={() => setViewingItem(null)} className="text-sm text-muted-foreground hover:text-foreground">
+                Close
+              </button>
+            </div>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Type</dt>
+                <dd>{viewingItem.item_type}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Item ID</dt>
+                <dd className="font-mono">{viewingItem.item_id}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Permission</dt>
+                <dd>{viewingItem.permission}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Visibility</dt>
+                <dd>{viewingItem.visibility}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Shared on</dt>
+                <dd>{new Date(viewingItem.created_at).toLocaleString()}</dd>
+              </div>
+              {viewingItem.owner && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Owner</dt>
+                  <dd>{viewingItem.owner.full_name || viewingItem.owner.email}</dd>
+                </div>
+              )}
+            </dl>
+            {itemRoute(viewingItem) && (
+              <a
+                href={itemRoute(viewingItem)!}
+                className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Open item
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

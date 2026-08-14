@@ -864,6 +864,10 @@ class ApiClient {
     return this.request<void>(`/sharing/${shareId}`, { method: "DELETE" });
   }
 
+  async removeMyShareAccess(shareId: string) {
+    return this.request<void>(`/sharing/${shareId}/recipients/me`, { method: "DELETE" });
+  }
+
   // =============================================
   // Teams
   // =============================================
